@@ -20,6 +20,12 @@ from yt_dlp import YoutubeDL
 # Versão atual do aplicativo (definida como 0.0.3)
 CURRENT_VERSION = "0.0.3"
 
+# Adição do ffmp3g standalone para Windows
+ffmpeg_path = os.path.join(os.path.dirname(__file__), "ffmpeg", "ffmpeg.exe")
+
+# Configuração para evitar warnings de fontes no Windows
+os.environ['QT_LOGGING_RULES'] = 'qt.qpa.fonts.warning=false'
+
 # -----------------------------------------------------------------------------
 # Função para buscar atualizações automaticamente (comentada para uso futuro)
 # -----------------------------------------------------------------------------
@@ -100,6 +106,7 @@ class DownloadThread(QThread):
             'skip_unavailable_fragments': False,
             'nocheckcertificate': True,
             'http_chunk_size': 1024 * 1024,
+            'ffmpeg_location': ffmpeg_path,
         }
         if "twitch.tv" in self.item.url.lower():
             ydl_opts['concurrent_fragment_downloads'] = 4
