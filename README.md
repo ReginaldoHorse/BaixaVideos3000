@@ -1,8 +1,6 @@
 ![Baixa Videos 3000](https://genios.cc/logoReginaldo/reginaldohorse.gif)
 <br>
-&nbsp;&nbsp;<img src="https://genios.cc/logoReginaldo/gidBaixaVideos.gif" alt="Interface BaixaVideos 3000" width="500px">
 
-Observações: Cavalo rotatório rgb meramente ilustrativo.
 
 ##  O Que É Baixa Videos 3000?
 
