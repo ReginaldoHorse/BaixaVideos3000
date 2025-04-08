@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'">
+    <title>BaixaVideos3000</title>
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../node_modules/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="lib/select2.min.css">
+    <link rel="stylesheet" href="renderer.css">
+    <script src="../node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="../node_modules/popper.js/dist/umd/popper.min.js"></script>
+    <script src="lib/select2.min.js"></script>
+    <script src="../node_modules/sortablejs/Sortable.min.js"></script>
+</head>
+<body>
+
+<div class="container url-input">
+    <form id="url-form" class="row mx-auto">
+        <div class="input-group">
+            <input type="text" class="form-control" id="add-url" placeholder="Insira uma URL de vídeo/playlist para adicionar à fila">
+            <div class="input-group-append">
+                <button type="button" id="add-url-btn" class="btn btn-dark" title="Adicionar vídeo à fila"><i class="bi bi-plus"></i>Adicionar</button>
+            </div>
+            <button id="settingsBtn" title="Configurações" type="button" class="btn btn-dark"><i class="bi bi-gear"></i></button>
+        </div>
+    </form>
+</div>
+
+<div class="container-fluid queue-area">
+    <div class="row">
+        <div class="mx-auto queue">
+            <div class="empty">
+                <img src="img/baixavideos3000.gif" alt="BaixaVideos3000" class="logo"><br>
+                <i class="header bi bi-arrow-up"></i>
+                <p class="title" title="Sua fila está vazia">Sua fila está vazia</p>
+                <p class="undertitle">Adicione alguns vídeos.</p>
+            </div>
+            <div class="video-cards d-flex flex-wrap align-items-start"></div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid controls">
+    <div class="row mx-auto">
+        <div id="totalProgress" class="progress mx-auto">
+            <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            <small class="justify-content-center d-flex position-absolute w-100">Pronto para baixar!</small>
+        </div>
+    </div>
+    <div class="row buttons d-flex flex-row justify-content-center">
+        <button id="locationBtn" title="Local de download" class="btn btn-dark"><i class="bi bi-folder"></i></button>
+        
+        <button id="subtitleBtn" title="Desativar legendas" class="btn btn-dark"><i title="Legendas desativadas" class="bi-card-text-strike mb-3"></i></button>
+        <span class="spacer"></span>
+        <select title="Tipo de download" id="download-type" class="custom-select w-auto rounded" aria-label="Opção de tipo de download para toda a fila">
+            <option value="video" selected>Vídeo + áudio</option>
+            <option value="audio">Somente áudio</option>
+            <option value="videoOnly">Somente vídeo</option>
+        </select>
+        <select title="Qualidade" id="download-quality" class="custom-select w-auto rounded" aria-label="Opção de qualidade para toda a fila">
+            <option value="best" selected>Melhor</option>
+            <option value="worst">Pior</option>
+        </select>
+        <span class="spacer"></span>
+        <div class="dropdown dropup">
+            <button class="btn btn-dark dropdown-toggle" type="button" id="whenDoneButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Quando terminar
+            </button>
+            <ul id="whenDoneOptions" class="dropdown-menu" aria-labelledby="whenDoneButton">
+                <li><a class="dropdown-item dropdown-selected" href="#">Não fazer nada</a></li>
+                <li class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#">Fechar o programa</a></li>
+            </ul>
+        </div>
+        <span class="spacer"></span>
+        <button type="button" id="clearBtn" title="Limpar fila" class="btn btn-dark rounded" disabled><i class="bi bi-trash"></i></button>
+        <button id="downloadBtn" title="Baixar fila" class="btn btn-highlight rounded" disabled>Baixar</button>
+    </div>
+</div>
+
+<div class="template video-card" id="id">
+    <div class="row mx-auto">
+        <div class="handle"><i class="bi bi-grip-vertical"></i></div>
+        <div class="col-4">
+            <img class="mt-1" alt="Video thumbnail" nonce="imgErr" src="img/plain-placeholder.png" onerror="this.onerror=null;this.src='img/plain-placeholder.png';">
+        </div>
+        <div class="col border-right border-dark">
+            <p title="" class="card-title"></p>
+            <div class="row">
+                <div class="col-12">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        <small class="justify-content-center d-flex position-absolute w-100"></small>
+                    </div>
+                </div>
+            </div>
+            <div class="row options">
+                <div class="col-6">
+                    <select class="custom-select download-type">
+                        <option value="video" selected>Video + Audio</option>
+                        <option value="audio">Somente Audio</option>
+                        <option value="videoOnly">Somente Vídeo</option>
+                    </select>
+                    <select class="custom-select download-encoding">
+                        <option class="none" value="none" selected>Video codec</option>
+                    </select>
+                    <p class="metadata left"></p>
+                </div>
+                <div class="col-6">
+                    <select class="custom-select download-quality">
+                        <option class="audio" value="best" selected>Melhor</option>
+                        <option class="audio" value="worst">Pior</option>
+                        <option class="audio" value="320k">320k</option>
+                        <option class="audio" value="256k">256k</option>
+                        <option class="audio" value="224k">224k</option>
+                        <option class="audio" value="192k">192k</option>
+                        <option class="audio" value="160k">160k</option>
+                        <option class="audio" value="128k">128k</option>
+                        <option class="audio" value="96k">96k</option>
+                    </select>
+                    <select class="custom-select download-audio-encoding">
+                        <option class="none" value="none" selected>Audio codec</option>
+                    </select>
+                    <p class="metadata right"></p>
+                </div>
+            </div>
+            <div class="row info">
+                <div class="col-12">
+                    <p class="metadata info"></p>
+                </div>
+            </div>
+            <div class="row open">
+                <div class="col-6">
+                    <button class="btn btn-dark folder">Mostrar na Pasta</button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-dark item">Reproduzir</button>
+                </div>
+            </div>
+            <div class="row error d-none">
+                <div class="col-6">
+                    <button id="fullError" class="btn btn-dark">Mostrar erro completo</button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-dark report">Enviar relatório</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-1 buttons m-auto">
+            <a class="remove-btn" data-container="body" data-toggle="popover" tabindex="0" data-trigger="manual" data-placement="bottom" data-content="Clique novamente para remover"><i class="bi-x-circle mb-3"></i></a>
+            <a class="subtitle-btn"><i title="Legendas Desativadas" class="bi-card-text-strike"></i></a>
+            <a class="download-btn"><i class="bi-download mb-3"></i></a>
+            <a class="info-btn"><i class="bi-info-circle mb-3"></i></a>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+    <div class="modal-xl modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="infoModalLabel">Metadados do Vídeo</h5>
+                <button type="button" class="close dismiss" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <div class="row mb-3">
+                        <div class="thumb col-7">
+                            <img title="Clique para Baixar" src="img/plain-placeholder.png" onerror="this.onerror=null;this.src='img/plain-placeholder.png';" class="info-img" alt="thumbnail">
+                            <i title="Clique para Baixar" class="img-overlay bi bi-download"></i>
+                        </div>
+                        <div class="col-5">
+                            <p title="Visualizações"><i class="bi bi-eye"></i> -</p>
+                            <p title="Like / dislikes"><i class="bi bi-hand-thumbs-up"></i> - &nbsp;&nbsp; <i class="bi bi-hand-thumbs-down"></i> -</p>
+                            <p title="Avaliação média"><i class="bi bi-star"></i> -</p>
+                            <p title="Duração"><i class="bi bi-clock"></i> -</p>
+                        </div>
+                    </div>
+                    <textarea id="info-description" rows="5" cols="50" readonly></textarea>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item uploader"></li>
+                        <li class="list-group-item extractor"></li>
+                        <li class="list-group-item url"></li>
+                    </ul>
+                </div>
+                <span class="identifier d-none"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" title="Salvar como JSON" class="btn json btn-dark">Salvar como JSON</button>
+                <button type="button" class="btn dismiss btn-dark">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="subsModal" tabindex="-1" aria-labelledby="subsModalLabel" aria-hidden="true">
+    <div class="modal-xl modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="subsModalLabel">Configurações de Legenda</h5>
+                <button type="button" class="close dismiss" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <p class="description">Selecione o idioma das legendas para baixar:</p>
+                    <div class="mb-1">
+                        <input class="check-input" type="checkbox" value="" id="enableSubs">
+                        <label class="check-label" for="enableSubs">Baixar Legendas</label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="subsLang" class="form-label d-block">Legendas:</label>
+                        <select class="w-75 mb-2" id="subsLang" multiple></select>
+                    </div>
+                    <div>
+                        <label for="autoGenSubsLang" class="form-label d-block">Legendas auto-geradas:</label>
+                        <select class="w-75 mb-2" id="autoGenSubsLang" multiple></select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn subsSave btn-dark" >Ok</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="logModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
+    <div class="modal-xl modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logModalLabel">Baixar Log</h5>
+                <button type="button" class="close dismiss" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <div class="log p-3 rounded w-100">Carregando Log...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" title="Salvar como Arquivo" class="btn save btn-dark">Salvar como Arquivo</button>
+                <button type="button" class="btn btn-dark dismiss" >Fechar</button>
+            </div>
+            <span class="identifier d-none"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+    <div class="modal-xl modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="settingsModalLabel">Configurações</h5>
+                <a class="help-button" target="_blank" href="https://github.com/ReginaldoHorse/BaixaVideos3000/wiki/Settings" title="Ajuda para Configurações"><i class="bi bi-question-circle"></i></a>
+                <button type="button" class="close dismiss" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>Desempenho</h3>
+                <div class="mb-4">
+                    <label for="sizeSetting" class="form-label">Cálculo do tamanho do download</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="sizeSetting">
+                        <option value="full" selected>Calcular automaticamente</option>
+                        <option value="click">Clique para calcular</option>
+                    </select>
+                    <input class="check-input" type="checkbox" value="" id="calculateTotalSize">
+                    <label class="check-label" for="calculateTotalSize">Calcular tamanho total do download</label>
+                </div>
+                <div class="mb-4">
+                    <label for="maxConcurrent" id="concurrentLabel" class="form-label d-inline-block">Máximo de tarefas simultâneas</label>
+                    <input type="range" class="form-range w-50 d-block align-middle" min="1" max="32" id="maxConcurrent">
+                    <button type="button" class="btn btn-dark" id="defaultConcurrent">Restaurar para o padrão</button>
+                </div>
+                <div class="mb-4">
+                    <label for="fileAccessRetries" class="form-label">Tentativas de solicitação de informações:</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="fileAccessRetries">
+                        <option value="3" selected>3</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="infinite">Infinito</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="retries" class="form-label">Tentativas de download:</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="retries">
+                        <option value="10" selected>10</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="infinite">Infinito</option>
+                    </select>
+                </div>
+
+                <hr/>
+                <h3>Aparência</h3>
+                <div class="mb-4">
+                    <label for="theme" class="form-label">Tema</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="theme">
+                        <option value="dark" selected>Escuro</option>
+                        <option value="light">Claro</option>
+                    </select>
+                </div>
+                <hr/>
+                <h3>Atualização automática</h3>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="updateBinary">
+                    <label class="check-label" for="updateBinary">Atualizar automaticamente o binário do ytdl</label>
+                </div>
+                <div>
+                    <input class="check-input" type="checkbox" value="" id="updateApplication">
+                    <label class="check-label" for="updateApplication">Atualizar automaticamente o aplicativo</label>
+                </div>
+                <hr/>
+                <h3>Rede</h3>
+                <div class="mb-4">
+                    <label for="proxySetting" class="form-label">Proxy (se vazio, nenhum proxy será usado)</label>
+                    <input id="proxySetting" class="form-control" type="text" value="" placeholder="URL do proxy HTTPS/SOCKS">
+                </div>
+                <div class="mb-4">
+                    <label for="ratelimitSetting" class="form-label">Limite de taxa por vídeo (KB/s)</label>
+                    <input id="ratelimitSetting" class="form-control" type="number" value="" placeholder="Limite de taxa em KB/s">
+                </div>
+                <hr/>
+                <h3>Entrada</h3>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="autoFillClipboard">
+                    <label class="check-label" for="autoFillClipboard">Preencher automaticamente links copiados</label>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="noPlaylist">
+                    <label class="check-label" for="noPlaylist">Baixar apenas o vídeo quando o link contiver lista e vídeo</label>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="globalShortcut">
+                    <label class="check-label" for="globalShortcut">Ativar atalhos globais de colar e baixar</label>
+                </div>
+                <hr/>
+                <h3>Saída</h3>
+                <div class="mb-3">
+                    <label for="outputFormat" class="form-label">Forçar o formato:</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="outputFormat">
+                        <option value="none" selected>Automático</option>
+                        <option value="mp4">MP4</option>
+                        <option value="mkv">MKV</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="audioOutputFormat" class="form-label">Forçar downloads somente de áudio a usar o formato de saída:</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="audioOutputFormat">
+                        <option value="none" selected>Auto</option>
+                        <option value="mp3">MP3</option>
+                        <option value="m4a">M4A</option>
+                        <option value="opus">Opus</option>
+                        <option value="vorbis">Vorbis</option>
+                        <option value="wav">WAV</option>
+                        <option value="aac">AAC</option>
+                        <option value="flac">FLAC</option>
+                    </select>
+                </div>
+                <div class="mb-1">
+                    <label for="nameFormat" class="form-label">Formato do nome do arquivo:</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="nameFormat">
+                        <option value="%(title).200s-(%(height)sp%(fps).0d).%(ext)s" selected>Titulo + qualidade</option>
+                        <option value="%(title).200s.%(ext)s">Titulo</option>
+                        <option value="custom">Customizar</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <input id="nameFormatCustom" class="form-control" type="text" value="%(title).200s-(%(height)sp%(fps).0d).%(ext)s" disabled>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="downloadMetadata">
+                    <label class="check-label" for="downloadMetadata">Salvar metadados</label>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="downloadJsonMetadata">
+                    <label class="check-label" for="downloadJsonMetadata">Salvar metadados JSON</label>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="downloadThumbnail">
+                    <label class="check-label" for="downloadThumbnail">Salvar thumbnail em arquivo</label>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="keepUnmerged">
+                    <label class="check-label" for="keepUnmerged">Manter arquivos não mesclados</label>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="avoidFailingToSaveDuplicateFileName">
+                    <label class="check-label" for="avoidFailingToSaveDuplicateFileName" title="Quando o nome do arquivo de destino já existir, enumere o nome do arquivo (por exemplo, 'filename(1).mp4') ao custo da retomada do download.">Avoid failing to save duplicate filename</label>
+                </div>
+                <hr/>
+                <h3>Sponsorblock</h3>
+                <div class="mb-3">
+                    <label for="subsLang" class="form-label d-block">Seções para marcar como capítulo:</label>
+                    <select class="w-75 mb-2" id="sponsorblockMark" multiple>
+                        <option value="sponsor">Anúncio</option>
+                        <option value="selfpromo">Autopromoção</option>
+                        <option value="interaction">Pedido de inscrição e like</option>
+                        <option value="intro">Intervalo / Animação de introdução</option>
+                        <option value="outro">Final sem áudio / Créditos</option>
+                        <option value="preview">Recapitulação</option>
+                        <option value="music_offtopic">Música fora do tópico</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="autoGenSubsLang" class="form-label d-block">Seções a serem removidas:</label>
+                    <select class="w-75 mb-2" id="sponsorblockRemove" multiple>
+                        <option value="sponsor">Anúncio</option>
+                        <option value="selfpromo">Autopromoção</option>
+                        <option value="interaction">Pedido de inscrição e like</option>
+                        <option value="intro">Intervalo / Animação de introdução</option>
+                        <option value="outro">Final sem áudio / Créditos</option>
+                        <option value="preview">Recapitulação</option>
+                        <option value="music_offtopic">Música fora do tópico</option>
+                    </select>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label" for="sponsorblockApi">Localização da API do Sponsoblock</label>
+                    <input class="form-control" type="text" value="" id="sponsorblockApi">
+                </div>
+                <hr/>
+                <h3>Advanced</h3>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="taskList">
+                    <label class="check-label" for="taskList">Restaurar a fila após uma reinicialização</label>
+                </div>
+                <div class="mb-1">
+                    <label class="check-label" for="userAgent">Agente</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="userAgent">
+                        <option value="spoof" selected>Disfarçado</option>
+                        <option value="empty">Vazio</option>
+                        <option value="default">Padrão</option>
+                    </select>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="validateCertificate">
+                    <label class="check-label" for="validateCertificate">Validar certificados HTTPS</label>
+                </div>
+                <div class="mb-1">
+                    <input class="check-input" type="checkbox" value="" id="enableEncoding">
+                    <label class="check-label" for="enableEncoding">Mostrar codecs disponíveis para download</label>
+                </div>
+                <div>
+                    <label for="splitMode" class="form-label">Dividir as playlists em vídeos separados quando:</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="splitMode">
+                        <option value="0">never split</option>
+                        <option value="49" selected>menos que 50 videos</option>
+                        <option value="99">menos de 100 vídeos</option>
+                        <option value="149">menos de 150 videos</option>
+                        <option value="199">menos de 200 videos</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p id="version"></p>
+                <button type="button" class="btn dismiss btn-dark">Cancelar</button>
+                <button type="button" class="btn apply btn-highlight">Aplicar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="update" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+        <strong class="mr-auto update-title">Tem uma atualização disponível!</strong>
+        <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div class="toast-body update-body"></div>
+</div>
+
+<div class="toast" id="task-list" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+        <strong class="mr-auto task-list-title">Você gostaria de restaurar sua fila?</strong>
+        <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div class="toast-body task-list-body"></div>
+</div>
+
+
+<script src="../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="../node_modules/windowbar/dist/index.js"></script>
+<script src="renderer.js"></script>
+
+</body>
+</html>
