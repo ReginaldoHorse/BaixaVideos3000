@@ -1,7 +1,7 @@
 [
   {
     "code": "No authentication/private",
-    "description": "Authenticate using&nbsp;<span onclick=\"$('#authModal').modal('show');\" class=\"openAuth\">cookies</span>&nbsp;and try again.",
+    "description": "Autentique-se usando&nbsp;<span onclick=\"$('#authModal').modal('show');\" class=\"openAuth\">cookies</span>&nbsp;e tente novamente.",
     "trigger": [
       "ERROR: Private video",
       "This video is private",
@@ -11,7 +11,7 @@
   },
   {
     "code": "Members-only content",
-    "description": "Authenticate using&nbsp;<span onclick=\"$('#authModal').modal('show');\" class=\"openAuth\">cookies</span>&nbsp;and try again.",
+    "description": "Autentique-se usando&nbsp;<span onclick=\"$('#authModal').modal('show');\" class=\"openAuth\">cookies</span>&nbsp;e tente novamente.",
     "trigger": [
       "ERROR: Join this channel to get access to members-only content",
       "This video is available to this channel's members on level"
@@ -19,27 +19,27 @@
   },
   {
     "code": "Blocked in country",
-    "description": "The uploader has blocked this video in your country.",
+    "description": "O uploader bloqueou este vídeo no seu país.",
     "trigger": " The uploader has not made this video available in your country"
   },
   {
     "code": "Blocked",
-    "description": "This video is blocked for an unspecified reason.",
+    "description": "Este vídeo está bloqueado por um motivo não especificado.",
     "trigger": " The video is blocked"
   },
   {
     "code": "Channel unavailable",
-    "description": "This channel is currently not available.",
+    "description": "Este canal não está disponível no momento.",
     "trigger": "This channel is not available"
   },
   {
     "code": "No connection could be made",
-    "description": "The host or your internet/proxy connection is down.",
+    "description": "O servidor ou sua conexão de internet/proxy está fora do ar.",
     "trigger": "getaddrinfo failed"
   },
   {
     "code": "URL not supported",
-    "description": "This URL is currently not supported by YTDL.",
+    "description": "Esta URL não é suportada atualmente pelo YTDL.",
     "trigger": [
       "is not a valid URL",
       "Unsupported URL"
@@ -47,17 +47,17 @@
   },
   {
     "code": "URL not found",
-    "description": "This is an incorrect or non-existing URL.",
+    "description": "Esta é uma URL incorreta ou inexistente.",
     "trigger": "[Errno 11001]"
   },
   {
     "code": "Private or non-existent playlist",
-    "description": "This playlist does not exist or is&nbsp;<span onclick=\"$('#authModal').modal('show');\" class=\"openAuth\">private</span>.",
+    "description": "Esta playlist não existe ou é&nbsp;<span onclick=\"$('#authModal').modal('show');\" class=\"openAuth\">privada</span>.",
     "trigger": "ERROR: The playlist does not exist"
   },
   {
     "code": "Age restricted video",
-    "description": "To download this video log-in using &nbsp;<span onclick=\"$('#authModal').modal('show');\" class=\"openAuth\">cookies</span>.",
+    "description": "Para baixar este vídeo, faça login usando&nbsp;<span onclick=\"$('#authModal').modal('show');\" class=\"openAuth\">cookies</span>.",
     "trigger": [
       "ERROR: Sign in to confirm your age",
       "Verify your age"
@@ -65,27 +65,27 @@
   },
   {
     "code": "Embed-only video",
-    "description": "Try using the URL of the embed page.",
+    "description": "Tente usar a URL da página de incorporação.",
     "trigger": "ERROR: Cannot download embed-only video without embedding URL"
   },
   {
     "code": "Possible broken extractor (404)",
-    "description": "YTDL isn't working, please wait for an update.",
+    "description": "O YTDL não está funcionando, por favor aguarde uma atualização.",
     "trigger": "HTTP Error 404"
   },
   {
     "code": "Private or removed video",
-    "description": "This video can not be extracted.",
+    "description": "Este vídeo não pode ser extraído.",
     "trigger": "metadata.formats is not iterable"
   },
   {
     "code": "ffmpeg not found",
-    "description": "Format merging requires ffmpeg.",
+    "description": "A união de formatos requer ffmpeg.",
     "trigger": "ffmpeg or avconv not found"
   },
   {
     "code": "ffmpeg not found",
-    "description": "Transcoding to mp3 or mp4 requires ffmpeg.",
+    "description": "A conversão para mp3 ou mp4 requer ffmpeg.",
     "trigger": [
       "ffmpeg or avconv could not be found",
       "ffprobe/avprobe and ffmpeg/avconv not found"
@@ -93,17 +93,17 @@
   },
   {
     "code": "Incomplete video ID",
-    "description": "The URL you entered is incomplete.",
+    "description": "A URL que você inseriu está incompleta.",
     "trigger": "Incomplete YouTube ID"
   },
   {
     "code": "Too many requests (429)",
-    "description": "You are being ratelimited by the service.",
+    "description": "Você está sendo limitado pelo serviço.",
     "trigger": "HTTP Error 429"
   },
   {
     "code": "Unable to extract initial data",
-    "description": "Please do try again in a moment.",
+    "description": "Por favor, tente novamente em um momento.",
     "trigger": [
       "ERROR: Unable to extract yt initial data",
       "Did not get any data blocks"
@@ -111,27 +111,27 @@
   },
   {
     "code": "No write permission",
-    "description": "No write permission in download folder.",
+    "description": "Sem permissão de escrita na pasta de download.",
     "trigger": "[Errno 95]"
   },
   {
     "code": "Blocked by firewall/program",
-    "description": "Check your firewall and or internet settings.",
+    "description": "Verifique seu firewall e/ou configurações de internet.",
     "trigger": "[WinError 10013]"
   },
   {
     "code": "Permission denied",
-    "description": "Unable to write files to your download location.",
+    "description": "Não foi possível escrever arquivos no local de download.",
     "trigger": "[Errno 13]"
   },
   {
     "code": "SSL verification failed",
-    "description": "Disable the 'Validate HTTPS certificates' setting.",
+    "description": "Desative a configuração 'Validar certificados HTTPS'.",
     "trigger": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed"
   },
   {
     "code": "Max fragment retries reached",
-    "description": "The service did not respond in time.",
+    "description": "O serviço não respondeu a tempo.",
     "trigger": [
       "giving up after 10 fragment retries",
       "giving up after 10 retries"
@@ -139,7 +139,7 @@
   },
   {
     "code": "Connection timed out",
-    "description": "Please try again in a moment.",
+    "description": "Por favor, tente novamente em um momento.",
     "trigger": [
       "EOF occurred in violation of protocol",
       "[Errno 60]"
@@ -147,37 +147,37 @@
   },
   {
     "code": "No connection could be made",
-    "description": "Check your proxy and internet connection.",
+    "description": "Verifique seu proxy e conexão com a internet.",
     "trigger": "[WinError 10060]"
   },
   {
     "code": "Connection refused",
-    "description": "The service or your internet might be down.",
+    "description": "O serviço ou sua internet pode estar fora do ar.",
     "trigger": "[WinError 10061]"
   },
   {
     "code": "Connection reset",
-    "description": "The connection was closed by the remote host.",
+    "description": "A conexão foi fechada pelo host remoto.",
     "trigger": "[WinError 10054]"
   },
   {
     "code": "No space left on device",
-    "description": "You have no space left on your drive.",
+    "description": "Você não tem espaço livre em seu disco.",
     "trigger": "[Errno 28]"
   },
   {
     "code": "This video is DRM protected",
-    "description": "Log in or use a proxy to download this video.",
+    "description": "Faça login ou use um proxy para baixar este vídeo.",
     "trigger": "This video is DRM protected"
   },
   {
     "code": "File in use by another process",
-    "description": "Don't open the file while it's downloading.",
+    "description": "Não abra o arquivo enquanto estiver baixando.",
     "trigger": "[WinError 32]"
   },
   {
     "code": "HTTP error 403",
-    "description": "You may be ratelimited, try clearing the cache.",
+    "description": "Você pode estar com limitação de taxa, tente limpar o cache.",
     "trigger": [
       "HTTP Error 403",
       "Error 403"
@@ -185,22 +185,22 @@
   },
   {
     "code": "HTTP error 400",
-    "description": "Bad URL or broken extractor.",
+    "description": "URL inválida ou extrator quebrado.",
     "trigger": "HTTP Error 400"
   },
   {
     "code": "HTTP error 405",
-    "description": "Bad URL or broken extractor.",
+    "description": "URL inválida ou extrator quebrado.",
     "trigger": "HTTP Error 405"
   },
   {
     "code": "No video found",
-    "description": "This tweet does not contain a video.",
+    "description": "Este tweet não contém um vídeo.",
     "trigger": "There's no video in this tweet"
   },
   {
     "code": "Binaries missing/corrupted",
-    "description": "Please restart the app and disable antivirus.",
+    "description": "Por favor, reinicie o aplicativo e desative o antivírus.",
     "trigger": [
       "Command failed with ENOENT: resources\\app.asar.unpacked\\binaries\\youtube-dl.exe",
       "Command failed with ENOENT: binaries/youtube-dl.exe",
@@ -209,12 +209,12 @@
   },
   {
     "code": "Missing dependency",
-    "description": "Please install <a href=\"https://github.com/ReginaldoHorse/BaixaVideos3000#how-to-use\" target=\"_blank\"> Microsoft Visual C++ 2010</a>",
+    "description": "Por favor, instale <a href=\"https://github.com/ReginaldoHorse/BaixaVideos3000#how-to-use\" target=\"_blank\"> Microsoft Visual C++ 2010</a>",
     "trigger": "3221225781"
   },
   {
     "code": "Video not found",
-    "description": "This video does not exist.",
+    "description": "Este vídeo não existe.",
     "trigger": [
       "Video has not been found",
       "does not exist"
@@ -222,7 +222,7 @@
   },
   {
     "code": "Geo-locked content",
-    "description": "Try using a vpn or proxy.",
+    "description": "Tente usar uma VPN ou proxy.",
     "trigger": [
       "bbc.co.uk returned error: geolocation",
       "This video is not available from your location due to geo restriction"
@@ -230,47 +230,47 @@
   },
   {
     "code": "Access forbidden",
-    "description": "Not enough permissions to access the download URL.",
+    "description": "Permissões insuficientes para acessar a URL de download.",
     "trigger": "Access to this resource is forbidden by access policy"
   },
   {
     "code": "Unknown URL type",
-    "description": "An invalid url scheme was used, try using http/https.",
+    "description": "Um esquema de URL inválido foi usado, tente usar http/https.",
     "trigger": "urlopen error unknown url type"
   },
   {
     "code": "Download file not found",
-    "description": "The download file was deleted/moved while it wasn't done yet.",
+    "description": "O arquivo de download foi excluído/movido antes de ser concluído.",
     "trigger": "[WinError 2]"
   },
   {
     "code": "Not premiered yet",
-    "description": "This video hasn't premiered yet.",
+    "description": "Este vídeo ainda não estreou.",
     "trigger": "Premieres in"
   },
   {
     "code": "Copyright claimed",
-    "description": "This video was blocked because of a copyright claim.",
+    "description": "Este vídeo foi bloqueado devido a uma reclamação de direitos autorais.",
     "trigger": "who has blocked it on copyright grounds"
   },
   {
     "code": "Cannot allocate memory",
-    "description": "FFmpeg has run out of memory, converting failed.",
+    "description": "O FFmpeg ficou sem memória, a conversão falhou.",
     "trigger": "Cannot allocate memory"
   },
   {
     "code": "Livestream not started yet",
-    "description": "Wait for the livestream to start.",
+    "description": "Aguarde o início da transmissão ao vivo.",
     "trigger": "This live event will begin in a few moments."
   },
   {
     "code": "Thumbnail embedding not supported",
-    "description": "Only mp3 and m4a/mp4 are supported for thumbnail embedding for now.",
+    "description": "Apenas mp3 e m4a/mp4 são suportados para incorporação de miniaturas por enquanto.",
     "trigger": "ERROR: Only mp3 and m4a/mp4 are supported for thumbnail embedding for now."
   },
   {
     "code": "SponsorBlock API unreachable",
-    "description": "Unable to communicate with SponsorBlock API, please try again.",
+    "description": "Não foi possível se comunicar com a API do SponsorBlock, por favor tente novamente.",
     "trigger": "ERROR: Unable to communicate with SponsorBlock API"
   }
 ]
