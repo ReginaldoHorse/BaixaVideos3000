@@ -66,8 +66,11 @@
       "applicationId": "baixavideos3000"
     },
     "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
       "include": "./build/vcredist.nsh",
-      "packElevateHelper": false
+      "packElevateHelper": false,
+      "license": "build/DISCLAIMER.txt"
     },
     "productName": "Baixa Vídeos 3000",
     "copyright": "Copyright © 2024",
