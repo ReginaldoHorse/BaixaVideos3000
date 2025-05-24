@@ -90,8 +90,12 @@ Todas essas novas features e correções foram sugeridas pelas pessoas que usam 
 - 📡 yt-dlp para extração de vídeos
 
 ## 📜 Licença
-Este projeto é open-source e está disponível sob a licença MIT.
+AGPL-3.0-only
+## Créditos
+
+Eu migrei o projeto em python para essa nova versão me baseando em [Open Video Downloader](https://github.com/jely2002/youtube-dl-gui), criado originalmente por **Jelle Glebbeek**. Atualmente mantido e modificado por **Reginaldo Horse**.
+
 
 ---
-Desenvolvido por **Reginaldo Horse** 🐴🚀
+**Reginaldo Horse** 🐴🚀
 
