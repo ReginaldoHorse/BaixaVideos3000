@@ -32,6 +32,32 @@ não é suportado em programas de edição para o codec h264 que todos os progra
 
 Todas essas novas features e correções foram sugeridas pelas pessoas que usam o BaixaVideos 3000, obrigado!
 
+## 🔧 Compilando a partir do código-fonte
+
+Para compilar o projeto a partir do código-fonte, siga os passos abaixo:
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/ReginaldoHorse/BaixaVideos3000.git
+2. Acesse o diretório do projeto:
+    ```bash
+   cd BaixaVideos3000
+3. Instale as dependências com npm:
+   ```bash
+   npm install
+4. Compile o projeto com o electron-builder. Por exemplo, para gerar um instalador do Windows
+    ```bash
+   npx electron-builder --win
+Ou para MAC
+  ```bash
+   npx electron-builder --mac
+```
+Ou para Linux
+  ```bash
+   npx electron-builder --linux
+```
+5. Os arquivos estarão dentro da pasta: /dist
+
+
 ## 👥 Colaboradores
 
 <table>
