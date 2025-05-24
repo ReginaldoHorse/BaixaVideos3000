@@ -1,7 +1,7 @@
 {
-  "name": "youtube-dl-gui",
+  "name": "baixavideos3000",
   "version": "2.5.5",
-  "description": "Baixa Videos 3000",
+  "description": "Baixa Vídeos 3000 - Um gerenciador visual de downloads baseado no youtube-dl",
   "main": "main.js",
   "scripts": {
     "start": "electron . --dev --ozone-platform-hint=auto",
@@ -21,9 +21,10 @@
     "download",
     "youtube",
     "gui",
-    "interface"
+    "baixar vídeos",
+    "gerenciador"
   ],
-  "author": "Jelle Glebbeek",
+  "author": "Reginaldo Horse",
   "license": "AGPL-3.0-only",
   "devDependencies": {
     "electron": "^26.2.2",
@@ -54,22 +55,22 @@
   },
   "build": {
     "afterPack": "./build/appimage-fix.js",
-    "appId": "com.jelleglebbeek.youtube-dl-gui",
+    "appId": "com.reginaldohorse.baixavideos3000",
     "asarUnpack": "**/binaries/*",
     "appx": {
       "backgroundColor": "#292929",
-      "displayName": "Baixa Videos 3000",
-      "identityName": "3216JelleGlebbeek.youtube-dl-gui",
+      "displayName": "Baixa Vídeos 3000",
+      "identityName": "ReginaldoHorse.BaixaVideos3000",
       "publisher": "CN=EBDD6AA4-D72E-42C6-BBCB-A288476F0CBE",
-      "publisherDisplayName": "Jelle Glebbeek",
-      "applicationId": "openvideodownloader"
+      "publisherDisplayName": "Reginaldo Horse",
+      "applicationId": "baixavideos3000"
     },
     "nsis": {
       "include": "./build/vcredist.nsh",
       "packElevateHelper": false
     },
-    "productName": "Baixa Videos 3000",
-    "copyright": "Copyright © 2020-2021 Jelle Glebbeek",
+    "productName": "Baixa Vídeos 3000",
+    "copyright": "Copyright © 2024",
     "win": {
       "target": "nsis",
       "icon": "renderer/img/icon.ico",
@@ -114,14 +115,14 @@
     },
     "linux": {
       "target": "AppImage",
-      "executableName": "open-video-downloader",
+      "executableName": "baixavideos3000",
       "icon": "renderer/img/icon.png",
-      "synopsis": "A cross-platform GUI for youtube-dl",
+      "synopsis": "Uma interface visual multiplataforma para downloads com youtube-dl",
       "category": "X-utility",
       "desktop": {
-        "Name": "Open-Video-Downloader",
-        "Icon": "youtube-dl-gui",
-        "Comment": "A cross-platform GUI for youtube-dl"
+        "Name": "Baixa Vídeos 3000",
+        "Icon": "baixavideos3000",
+        "Comment": "Uma interface visual multiplataforma para youtube-dl"
       },
       "files": [
         "!**/binaries/AtomicParsley.exe",
