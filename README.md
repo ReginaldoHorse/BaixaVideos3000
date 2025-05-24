@@ -126,7 +126,7 @@ Ou para Linux
 AGPL-3.0-only
 ## Créditos
 
-Eu migrei o projeto em python para essa nova versão me baseando em [Open Video Downloader](https://github.com/jely2002/youtube-dl-gui), criado originalmente por **Jelle Glebbeek**. Atualmente mantido e modificado por **Reginaldo Horse**.
+Eu migrei o projeto em python para essa nova versão em Electron me baseando em [Open Video Downloader](https://github.com/jely2002/youtube-dl-gui), criado originalmente por **Jelle Glebbeek**. Atualmente mantido e modificado por **Reginaldo Horse**.
 
 
 ---
