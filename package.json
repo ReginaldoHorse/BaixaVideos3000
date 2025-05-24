@@ -66,14 +66,11 @@
       "applicationId": "baixavideos3000"
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
       "include": "./build/vcredist.nsh",
-      "packElevateHelper": false,
-      "license": "build/DISCLAIMER.txt"
+      "packElevateHelper": false
     },
     "productName": "Baixa Vídeos 3000",
-    "copyright": "Copyright © 2024",
+    "copyright": "Copyright © 2025",
     "win": {
       "target": "nsis",
       "icon": "renderer/img/icon.ico",
@@ -122,11 +119,6 @@
       "icon": "renderer/img/icon.png",
       "synopsis": "Uma interface visual multiplataforma para downloads com youtube-dl",
       "category": "X-utility",
-      "desktop": {
-        "Name": "Baixa Vídeos 3000",
-        "Icon": "baixavideos3000",
-        "Comment": "Uma interface visual multiplataforma para youtube-dl"
-      },
       "files": [
         "!**/binaries/AtomicParsley.exe",
         "!**/renderer/img/icon.icns",
