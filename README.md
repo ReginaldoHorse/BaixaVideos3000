@@ -85,9 +85,16 @@ Todas essas novas features e correções foram sugeridas pelas pessoas que usam 
 6. Clique em "Baixar" e aguarde a conclusão.
 
 ## 🏗️ Tecnologias Utilizadas
-- 🐍 Python (com interface gráfica moderna)
-- 🎞️ FFmpeg para conversão de formatos
-- 📡 yt-dlp para extração de vídeos
+- JavaScript
+- Electron
+- Bootstrap
+- Node.js
+- Jest
+- ESLint
+- axios
+- electron-builder
+- FFmpeg para conversão de formatos
+- yt-dlp para extração de vídeos
 
 ## 📜 Licença
 AGPL-3.0-only
