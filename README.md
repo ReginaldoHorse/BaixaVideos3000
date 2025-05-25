@@ -40,7 +40,7 @@ Para compilar o projeto a partir do código-fonte, siga os passos abaixo:
    git clone https://github.com/ReginaldoHorse/BaixaVideos3000.git
 2. Acesse o diretório do projeto:
     ```bash
-   cd BaixaVideos3000
+   cd ./baixavideos3000
 3. Instale as dependências com npm:
    ```bash
    npm install
