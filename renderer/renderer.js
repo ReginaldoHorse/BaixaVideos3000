@@ -434,13 +434,34 @@ function toggleWhiteMode(setting) {
 }
 
 function parseURL(data) {
+    // Helper: sanitize a single URL
+    function sanitizeUrl(url) {
+        if(!url || typeof url !== 'string') return url;
+        // If it's a playlist link explicitly, don't modify
+        if(url.toLowerCase().includes('&list=')) return url;
+
+        // If there's any query param that contains 'radio' (like start_radio or foo_radio),
+        // the YouTube 'radio' links generate massive playlists. In that case remove everything
+        // from the first '&' onward and keep only the video part.
+        const lower = url.toLowerCase();
+        if(lower.includes('radio')) {
+            const ampIndex = url.indexOf('&');
+            if(ampIndex > -1) {
+                return url.substring(0, ampIndex);
+            }
+        }
+        return url;
+    }
+
     if(data.includes(',')) {
         let urls = data.replaceAll(" ", "").split(",");
-        for(const url of urls) {
+        for(const rawUrl of urls) {
+            const url = sanitizeUrl(rawUrl);
             window.main.invoke('videoAction', {action: "entry", url: url});
         }
     } else {
-        window.main.invoke('videoAction', {action: "entry", url: data});
+        const url = sanitizeUrl(data);
+        window.main.invoke('videoAction', {action: "entry", url: url});
     }
 }
 
@@ -1164,23 +1185,16 @@ function resetTotalProgress() {
 }
 
 function updateButtons(videos) {
-    let downloadableVideos = false;
+    // Enable/disable clear button depending on presence of any videos
+    const hasVideos = Array.isArray(videos) && videos.length > 0;
+    $('#clearBtn').prop('disabled', !hasVideos);
 
-    if(videos.length > 0) $('#clearBtn').prop("disabled", false);
-    else $('#clearBtn').prop("disabled", true);
-
-    for(const video of videos) {
-        let domVideo = getCard(video.identifier);
-        if(domVideo == null) continue;
-        if(video.downloadable) {
-            $('#downloadBtn').prop("disabled", false);
-            downloadableVideos = true;
-            break;
-        }
-        if(!downloadableVideos) {
-            $('#downloadBtn').prop("disabled", true);
-        }
-    }
+    // Enable the download button if any video is marked downloadable.
+    // Don't require the DOM card to exist — the renderer may receive
+    // this IPC before the card is inserted, which previously left the
+    // button disabled even when downloads were available.
+    const downloadableVideos = Array.isArray(videos) && videos.some(v => !!v.downloadable);
+    $('#downloadBtn').prop('disabled', !downloadableVideos);
 }
 
 function changeSubsToRetry(url, card) {

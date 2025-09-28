@@ -4,8 +4,8 @@
     --secondary-bg-color: #1a1919;
     --tertiary-bg-color: #191919;
     --font-color: #fff;
-    --highlight-color: #39b439;
-    --secondary-highlight-color: #34b134;
+    --highlight-color: #b388ff; /* light purple */
+    --secondary-highlight-color: #9a63ff; /* secondary purple */
     --scroll-bar-color: #555;
     --error-color: #b73232;
 }
@@ -31,12 +31,13 @@ select {
 }
 
 .btn-highlight {
-    background-color: var(--highlight-color) !important;
+    /* Keep the download button green while progress bars use purple */
+    background-color: #39b439 !important;
     color: var(--font-color) !important;
 }
 
 .btn-highlight:hover:not(:disabled) {
-    background-color: var(--secondary-highlight-color) !important;
+    background-color: #34b134 !important;
 }
 
 /* TOASTS */
@@ -349,7 +350,8 @@ select {
 }
 
 .progress-bar {
-    background-color: var(--highlight-color);
+    /* Progress bars use the purple highlight */
+    background-color: #b388ff;
 }
 
 .metadata .btn-dark {

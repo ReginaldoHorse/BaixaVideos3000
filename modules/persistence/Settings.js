@@ -13,8 +13,8 @@ class Settings {
     ) {
         this.paths = paths;
         this.env = env
-        this.outputFormat = outputFormat == null ? "none" : outputFormat;
-        this.audioOutputFormat = audioOutputFormat == null ? "none" : audioOutputFormat;
+    this.outputFormat = outputFormat == null ? "mp4" : outputFormat;
+    this.audioOutputFormat = audioOutputFormat == null ? "mp3" : audioOutputFormat;
         this.downloadPath = downloadPath == null ? env.app.getPath("downloads") : downloadPath;
         this.proxy = proxy == null ? "" : proxy;
         this.rateLimit = rateLimit == null ? "" : rateLimit;
@@ -53,7 +53,6 @@ class Settings {
     getDefaultMaxConcurrent() {
         let halfOfCpus = Math.round(os.cpus().length / 2);
 
-        //When os.cpus() returns an empty list, default to 4
         if (halfOfCpus <= 0) {
             halfOfCpus = 4;
         }

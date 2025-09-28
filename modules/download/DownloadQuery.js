@@ -36,7 +36,7 @@ class DownloadQuery extends Query {
             } else if(audioQuality === "worst") {
                 audioQuality = "9";
             }
-            const audioOutputFormat = this.environment.settings.audioOutputFormat;
+            const audioOutputFormat = "mp3";
             args = [
                 '--extract-audio', '--audio-quality', audioQuality,
                 '--ffmpeg-location', this.environment.paths.ffmpeg,
@@ -53,6 +53,7 @@ class DownloadQuery extends Query {
                 args.push("bestaudio[ext=m4a]/bestaudio");
             }
             if(audioOutputFormat !== "none") {
+            
                 args.push('--audio-format', audioOutputFormat);
             }
             if(audioOutputFormat === "m4a" || audioOutputFormat === "mp3" || audioOutputFormat === "none") {
@@ -61,8 +62,8 @@ class DownloadQuery extends Query {
         } else {
             if (this.video.formats.length !== 0) {
                 let format;
-                const encoding = this.video.selectedEncoding === "none" ? "" : "[vcodec=" + this.video.selectedEncoding + "]";
-                const audioEncoding = this.video.selectedAudioEncoding === "none" ? "" : "[acodec=" + this.video.selectedAudioEncoding + "]";
+                const encoding = (this.environment.settings.outputFormat === "mp4") ? "[vcodec=h264]" : (this.video.selectedEncoding === "none" ? "" : "[vcodec=" + this.video.selectedEncoding + "]");
+                const audioEncoding = "";
                 if(this.video.videoOnly) {
                     format = `
                     bestvideo[height=${this.format.height}][fps=${this.format.fps}][ext=mp4]${encoding}
@@ -110,6 +111,14 @@ class DownloadQuery extends Query {
                     '--output-na-placeholder', "",
                     '--progress-template', PROGRESS_TEMPLATE
                 ];
+                if (this.environment.settings.outputFormat === "mp4") {
+                    // Re-encode video to H.264 and audio to AAC to ensure editor compatibility
+                    args.push('--postprocessor-args');
+                    args.push('-c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k -progress pipe:1 -nostats');
+                } else if (this.environment.settings.audioOutputFormat === "mp3") {
+                    args.push('--postprocessor-args');
+                    args.push('-c:a libmp3lame -b:a 192k -progress pipe:1 -nostats');
+                }
             } else {
                 args = [
                     "-o", output,
@@ -167,7 +176,10 @@ class DownloadQuery extends Query {
                 this.environment.logger.log(this.video.identifier, liveData);
                 this.video.setFilename(liveData);
 
-                if (!liveData.includes("[download]")) return;
+                // Allow both youtube-dl/yt-dlp '[download]' lines and ffmpeg key=value progress lines
+                const isDownloadLine = liveData.includes("[download]");
+                const isFfmpegKvLine = liveData.includes('=') && (liveData.includes('out_time') || liveData.includes('out_time_ms') || liveData.includes('progress') || liveData.includes('time='));
+                if (!isDownloadLine && !isFfmpegKvLine) return;
 
                 if (liveData.includes("Destination")) destinationCount += 1;
 
@@ -183,37 +195,116 @@ class DownloadQuery extends Query {
                     return;
                 }
 
+                // Try parsing youtube-dl/yt-dlp JSON progress first
                 let liveDataObj;
                 try {
-                    liveDataObj = JSON.parse(liveData.slice(liveData.indexOf('{')));
+                    if (liveData.includes('{')) {
+                        liveDataObj = JSON.parse(liveData.slice(liveData.indexOf('{')));
+                    }
                 } catch(e) {
-                    return;
+                    liveDataObj = null;
                 }
 
+                
+                if (!this._ffmpegMessageTimerStarted && (liveData.includes('out_time') || liveData.includes('out_time_ms'))) {
+                    this._ffmpegMessageTimerStarted = true;
+                    this._ffmpegMessageInterval = null;
+                    // Start a 20s timeout to begin rotating messages
+                    this._ffmpegMessageTimeout = setTimeout(() => {
+                        const msgs = [
+                            "Aguente aí, estou tornando o arquivo compatível",
+                            "Demora um pouquinho mas é útil",
+                            "Esse arquivo será compatível com tudo",
+                            "A plataforma de vídeos vermelha adora atrapalhar"
+                        ];
+                        let idx = 0;
+                        this.progressBar.setInitial("Convertendo com FFmpeg");
+                        this._ffmpegMessageInterval = setInterval(() => {
+                            this.progressBar.setInitial(msgs[idx % msgs.length]);
+                            idx += 1;
+                        }, 8000);
+                    }, 20000);
+                }
+                if (liveData && liveData.includes('=')) {
+                    const kv = {};
+                    const lines = liveData.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                    for (const line of lines) {
+                        const parts = line.split('=');
+                        if (parts.length === 2) kv[parts[0]] = parts[1];
+                    }
+                    // ffmpeg progress provides 'out_time_ms' or 'out_time' and 'progress'
+                    if (kv.out_time_ms || kv.out_time) {
+                        const outMs = kv.out_time_ms ? parseInt(kv.out_time_ms, 10) : (() => {
+                            const t = kv.out_time.split(':');
+                            return (parseInt(t[0],10)*3600 + parseInt(t[1],10)*60 + Math.floor(parseFloat(t[2]))) * 1000;
+                        })();
+                        if (this.video.durationSeconds) {
+                            const completion = Math.min(outMs / (this.video.durationSeconds * 1000), 1);
+                            const percentage = Math.floor(completion * 100) + "." + (Math.floor(completion * 1000) % 10) + "%";
+                            // estimate remaining seconds
+                            const elapsed = outMs / 1000;
+                            const remaining = Math.max(0, this.video.durationSeconds - elapsed);
+                            const eta = new Date(remaining * 1000).toISOString().substr(11, 8);
+                            this.progressBar.updateDownload(percentage, eta, null, this.video.audioOnly || this.video.downloadingAudio);
+                            return;
+                        }
+                    }
+                }
+
+                // Fall back to youtube-dl progress JSON parsing
                 let percentage;
-                if ("fragment_count" in liveDataObj) {
-                    //When there is multiple fragments, cap the completion percentage to avoid some strange values.
+                if (liveDataObj && typeof liveDataObj === "object" &&
+                    typeof liveDataObj.fragment_count === "number" &&
+                    typeof liveDataObj.fragment_index === "number" &&
+                    typeof liveDataObj.downloaded_bytes === "number" &&
+                    typeof liveDataObj.total_bytes_estimate === "number") {
                     const completion = Math.min(
                         liveDataObj.downloaded_bytes / liveDataObj.total_bytes_estimate,
                         (liveDataObj.fragment_index + 1) / liveDataObj.fragment_count
                     );
                     percentage = Math.floor(completion * 100) + "." + (Math.floor(completion * 1000) % 10) + "%";
-                } else {
+                } else if (liveDataObj && typeof liveDataObj === "object" && typeof liveDataObj._percent_str === "string") {
                     percentage = liveDataObj._percent_str;
+                } else {
+                    const percentMatch = liveData.match(/(\d{1,3}\.\d)%?/);
+                    if (percentMatch) {
+                        percentage = percentMatch[1] + "%";
+                    } else {
+                        percentage = "0.0%";
+                    }
                 }
 
-                const speed = liveDataObj._speed_str;
-                const eta = liveDataObj.eta >= 0 ? liveDataObj._eta_str : "00:00";
+                const speed = liveDataObj ? liveDataObj._speed_str : null;
+                const eta = liveDataObj && liveDataObj.eta >= 0 ? liveDataObj._eta_str : "00:00";
 
                 this.progressBar.updateDownload(percentage, eta, speed, this.video.audioOnly || this.video.downloadingAudio);
             }));
         } catch (exception) {
             this.environment.errorHandler.checkError(exception, this.video.identifier);
+            // Clear any ffmpeg message timers
+            if(this._ffmpegMessageTimeout) {
+                clearTimeout(this._ffmpegMessageTimeout);
+                this._ffmpegMessageTimeout = null;
+            }
+            if(this._ffmpegMessageInterval) {
+                clearInterval(this._ffmpegMessageInterval);
+                this._ffmpegMessageInterval = null;
+            }
             return exception;
         }
 
         if(this.video.audioOnly) {
             await this.removeThumbnail(".jpg");
+        }
+
+        // Clear ffmpeg message timers once finished
+        if(this._ffmpegMessageTimeout) {
+            clearTimeout(this._ffmpegMessageTimeout);
+            this._ffmpegMessageTimeout = null;
+        }
+        if(this._ffmpegMessageInterval) {
+            clearInterval(this._ffmpegMessageInterval);
+            this._ffmpegMessageInterval = null;
         }
 
         if(this.environment.settings.avoidFailingToSaveDuplicateFileName) {
