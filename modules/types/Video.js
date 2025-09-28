@@ -104,6 +104,8 @@ class Video {
         this.subtitles = metadata.subtitles;
         this.autoCaptions = metadata.automatic_captions;
 
+        // Preserve raw duration in seconds for ETA calculations
+        this.durationSeconds = metadata.duration;
         this.duration = metadata.duration;
         if(metadata.duration != null) this.duration = new Date(metadata.duration * 1000)
             .toISOString()

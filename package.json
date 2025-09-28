@@ -1,19 +1,12 @@
 {
   "name": "baixavideos3000",
-  "version": "2.5.5",
+  "version": "2.9.9",
   "description": "Baixa Vídeos 3000 - Um gerenciador visual de downloads baseado no youtube-dl",
   "main": "main.js",
   "scripts": {
     "start": "electron . --dev --ozone-platform-hint=auto",
     "build": "electron-builder",
-    "lint": "eslint {**/modules/**/*.js,*.js} && eslint renderer/*.js",
-    "test": "jest --coverage",
-    "quick-test": "jest && eslint {**/modules/**/*.js,/*.js} && eslint renderer/*.js"
-  },
-  "jest": {
-    "collectCoverageFrom": [
-      "**/modules/**/*.js"
-    ]
+    "lint": "eslint {**/modules/**/*.js,*.js} && eslint renderer/*.js"
   },
   "keywords": [
     "youtube-dl",
@@ -29,8 +22,7 @@
   "devDependencies": {
     "electron": "^26.2.2",
     "electron-builder": "^24.6.4",
-    "eslint": "^7.32.0",
-    "jest": "^27.3.0"
+    "eslint": "^7.32.0"
   },
   "dependencies": {
     "adm-zip": "^0.5.10",

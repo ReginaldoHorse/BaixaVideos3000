@@ -12,22 +12,29 @@ class SizeQuery extends Query {
     }
 
     async connect() {
-        const encoding = this.video.selectedEncoding === "none" ? "" : "[vcodec=" + this.video.selectedEncoding + "]";
-        const audioEncoding = this.video.selectedAudioEncoding === "none" ? "" : "[acodec=" + this.video.selectedAudioEncoding + "]";
-        let formatArgument = `bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.audioQuality}audio/bestvideo[height=${this.format.height}][fps=${this.format.fps}]+${this.audioQuality}audio/bestvideo[height=${this.format.height}]+${this.audioQuality}audio/best[height=${this.format.height}]/bestvideo+bestaudio/best`;
+    const forceH264 = (this.environment.settings.outputFormat === "mp4");
+    const forceMp3 = (this.environment.settings.audioOutputFormat === "mp3");
+    const encoding = forceH264 ? "[vcodec=h264]" : (this.video.selectedEncoding === "none" ? "" : "[vcodec=" + this.video.selectedEncoding + "]");
+    // When forcing MP4 prefer AAC for audio codec in estimations
+    const audioEncoding = forceH264 ? "[acodec=aac]" : (forceMp3 ? "[acodec=mp3]" : (this.video.selectedAudioEncoding === "none" ? "" : "[acodec=" + this.video.selectedAudioEncoding + "]"));
+    let formatArgument = `bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}]+${this.audioQuality}audio${audioEncoding}/best[height=${this.format.height}]/bestvideo+bestaudio/best`;
         if(this.videoOnly) {
-            formatArgument = `bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}/bestvideo[height=${this.format.height}][fps=${this.format.fps}]/bestvideo[height=${this.format.height}]/best[height=${this.format.height}]/bestvideo/best`;
+            formatArgument = `bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}/bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}/bestvideo[height=${this.format.height}]${encoding}/best[height=${this.format.height}]/bestvideo/best`;
             if (this.format.fps == null) {
-                formatArgument = `bestvideo[height=${this.format.height}]${encoding}/bestvideo[height=${this.format.height}]/best[height=${this.format.height}]/bestvideo/best`
+                formatArgument = `bestvideo[height=${this.format.height}]${encoding}/bestvideo[height=${this.format.height}]${encoding}/best[height=${this.format.height}]/bestvideo/best`
             }
         } else {
-            formatArgument = `bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.video.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.video.audioQuality}audio/bestvideo[height=${this.format.height}][fps=${this.format.fps}]+${this.video.audioQuality}audio/bestvideo[height=${this.format.height}]+${this.video.audioQuality}audio/best[height=${this.format.height}]/bestvideo+bestaudio/best`;
+            formatArgument = `bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.video.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.video.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}][fps=${this.format.fps}]${encoding}+${this.video.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}]+${this.video.audioQuality}audio${audioEncoding}/best[height=${this.format.height}]/bestvideo+bestaudio/best`;
             if (this.format.fps == null) {
-                formatArgument = `bestvideo[height=${this.format.height}]${encoding}+${this.video.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}]${encoding}+${this.video.audioQuality}audio/bestvideo[height=${this.format.height}]+${this.video.audioQuality}audio/best[height=${this.format.height}]/bestvideo+bestaudio/best`
+                formatArgument = `bestvideo[height=${this.format.height}]${encoding}+${this.video.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}]${encoding}+${this.video.audioQuality}audio${audioEncoding}/bestvideo[height=${this.format.height}]${encoding}+${this.video.audioQuality}audio${audioEncoding}/best[height=${this.format.height}]/bestvideo+bestaudio/best`
             }
         }
         if(this.audioOnly) {
-            formatArgument = `bestvideo+${this.format}audio/bestvideo+bestaudio/best`;
+            if (forceMp3) {
+                formatArgument = `bestaudio[acodec=mp3]/bestaudio/best`;
+            } else {
+                formatArgument = `bestaudio/bestaudio/best`;
+            }
         }
 
         let output = await this.environment.metadataLimiter.schedule(() => this.start(this.video.url, ["-J", "--flat-playlist", "-f", formatArgument]));
