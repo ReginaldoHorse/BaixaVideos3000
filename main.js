@@ -134,6 +134,16 @@ function startCriticalHandlers(env) {
             return queryManager.getAvailableSubtitles(args.identifier, args.unified);
         });
 
+        // Open external links from renderer safely
+        ipcMain.handle('openExternal', async (event, url) => {
+            try {
+                await shell.openExternal(url);
+                return { ok: true };
+            } catch (e) {
+                return { ok: false, error: String(e) };
+            }
+        });
+
         ipcMain.handle('getSelectedSubtitles', (event, args) => {
             return queryManager.getSelectedSubtitles(args.identifier);
         });

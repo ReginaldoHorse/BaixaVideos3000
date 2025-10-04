@@ -1410,7 +1410,22 @@ async function getSettings() {
     $('#sizeSetting').val(settings.sizeMode);
     $('#splitMode').val(settings.splitMode);
     $('#theme').val(settings.theme);
-    $('#version').html("<strong>Versão: </strong><a href='https://github.com/ReginaldoHorse/BaixaVideos3000/releases/tag/v" + settings.version + "' target='_blank'>" + settings.version + " &#128279;</a>");
+    const versionUrl = 'https://github.com/ReginaldoHorse/BaixaVideos3000/';
+    $('#version').html("<strong>Versão: </strong><a href='" + versionUrl + "' target='_blank'>" + settings.version + " &#128279;</a>");
+    // Open link via main so we can fallback to mailto on failure
+    try {
+        $('#version a').off('click').on('click', async (e) => {
+            e.preventDefault();
+            const url = versionUrl;
+            const result = await window.main.invoke('openExternal', url);
+            if(!result || !result.ok) {
+                // fallback: open mail client to report
+                await window.main.invoke('openExternal', 'mailto:reginaldohorse@mail.com');
+            }
+        });
+    } catch (e) {
+        // If invoking main fails, leave the normal link behavior
+    }
     window.settings = settings;
 }
 
