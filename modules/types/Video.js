@@ -20,6 +20,9 @@ class Video {
         this.error = false;
         this.filename = null;
         this.identifier = Utils.getRandomID(32);
+        // Trimming in seconds (null means no trim)
+        this.trimStart = null;
+        this.trimEnd = null;
     }
 
     setFilename(liveData) {

@@ -4,10 +4,48 @@
     --secondary-bg-color: #1a1919;
     --tertiary-bg-color: #191919;
     --font-color: #fff;
-    --highlight-color: #b388ff; /* light purple */
-    --secondary-highlight-color: #9a63ff; /* secondary purple */
+    --highlight-color: #4aa3ff; 
+    --secondary-highlight-color: #1f8cff;
     --scroll-bar-color: #555;
     --error-color: #b73232;
+}
+
+/* Cut timeline styles */
+.timeline-track { position: relative; }
+.timeline-handle { position: absolute; top: 50%; transform: translateY(-50%); width: 14px; height: 28px; background: #fff; border-radius: 3px; cursor: ew-resize; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+.timeline-selected { position: absolute; top: 0; height: 100%; background: rgba(74,163,255,0.25); border-radius: 4px; }
+.timeline-handle.left { background: #4aa3ff; }
+.timeline-handle.right { background: #39b439; }
+.cut-badge { background: #4aa3ff; color: #000; margin-left: 6px; padding: 2px 6px; font-size: 0.75rem; }
+.timeline-tooltip { position: absolute; transform: translate(-50%, -130%); background: rgba(0,0,0,0.8); color: #fff; padding: 4px 6px; font-size: 0.75rem; border-radius: 4px; white-space: nowrap; pointer-events: none; z-index: 1000; }
+.text-danger { color: #ff6b6b; }
+
+.cut-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cut-row .cut-btn {
+    margin-left: auto; 
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* Hide cut controls visually until feature is ready for release */
+.cut-row,
+.cut-row .cut-btn,
+.cut-row .cut-download-btn,
+.cut-badge,
+.cut-interval {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Also ensure the modal cannot be opened visually (JS may still trigger it) */
+#cutModal {
+    display: none !important;
+    visibility: hidden !important;
 }
 
 .white-mode {
@@ -31,7 +69,6 @@ select {
 }
 
 .btn-highlight {
-    /* Keep the download button green while progress bars use purple */
     background-color: #39b439 !important;
     color: var(--font-color) !important;
 }
@@ -40,7 +77,7 @@ select {
     background-color: #34b134 !important;
 }
 
-/* TOASTS */
+
 .toast-header {
     border-bottom: none;
     color: var(--font-color);
@@ -350,8 +387,8 @@ select {
 }
 
 .progress-bar {
-    /* Progress bars use the purple highlight */
-    background-color: #b388ff;
+    /* Progress bars use the blue highlight */
+    background-color: #4aa3ff;
 }
 
 .metadata .btn-dark {
@@ -613,7 +650,7 @@ i.img-overlay:hover, img.info-img:hover ~ i.img-overlay  {
     outline: none !important;
 }
 
-/* SELECT2 OVERRIDES */
+
 
 .select2-dropdown {
     background-color: var(--secondary-bg-color) !important;

@@ -152,7 +152,15 @@ function startCriticalHandlers(env) {
                     else if(args.downloadType === "single") queryManager.downloadVideo(args);
                     break;
                 case "entry":
-                    queryManager.manage(args.url);
+                    try {
+                        // Defensive sanitize at the IPC boundary. QueryManager.manage
+                        // also sanitizes, but enforcing it here prevents other IPC
+                        // callers from bypassing hygiene.
+                        const cleaned = typeof queryManager.sanitizeUrl === 'function' ? queryManager.sanitizeUrl(args.url) : args.url;
+                        queryManager.manage(cleaned);
+                    } catch (e) {
+                        queryManager.manage(args.url);
+                    }
                     break;
                 case "info":
                     queryManager.showInfo(args.identifier);
