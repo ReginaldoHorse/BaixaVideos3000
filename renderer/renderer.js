@@ -5,6 +5,11 @@ let sizeCooldown = [];
 let sizeCache = [];
 let logUpdateTask;
 
+// Feature toggle: hide cut UI until trimmed-download is ready in production
+if (typeof window !== 'undefined') {
+    window.disableCutUI = true;
+}
+
 (function () { init(); })();
 
 async function init() {
@@ -76,6 +81,31 @@ async function init() {
     //Set the selected theme (dark | light)
     const startupTheme = await window.main.invoke('theme');
     toggleWhiteMode(startupTheme);
+
+    // Show legal notice on first run (auto-hide after 22s or when dismissed) and persist on any hide
+    (async () => {
+        await getSettings();
+        if(!window.settings || !window.settings.hasSeenLegalModal) {
+            $('#legalNoticeModal').modal({backdrop: true, keyboard: true});
+            $('#legalNoticeModal').modal('show');
+            // Auto-hide after 22 seconds
+            const hideTask = setTimeout(() => {
+                $('#legalNoticeModal').modal('hide');
+            }, 22000);
+
+            // Persist the flag when modal is hidden for any reason
+            $('#legalNoticeModal').off('hide.bs.modal').on('hide.bs.modal', () => {
+                clearTimeout(hideTask);
+                window.settings = window.settings || {};
+                window.settings.hasSeenLegalModal = true;
+                window.main.invoke('settingsAction', {action: 'save', settings: window.settings});
+            });
+            // Ensure any dismiss buttons explicitly hide the modal (and trigger hide.bs.modal)
+            $('#legalNoticeModal .dismiss').off('click').on('click', () => {
+                $('#legalNoticeModal').modal('hide');
+            });
+        }
+    })();
 
     $('.video-cards').each(function() {
         let sel = this;
@@ -302,7 +332,9 @@ async function init() {
                         encoding: $(card).find('.custom-select.download-encoding').val(),
                         audioEncoding: $(card).find('.custom-select.download-audio-encoding').val(),
                         type: $(card).find('.custom-select.download-type').val(),
-                        downloadSubs: !$(card).find('.subtitle-btn i').hasClass("bi-card-text-strike")
+                        downloadSubs: !$(card).find('.subtitle-btn i').hasClass("bi-card-text-strike"),
+                        trimStart: $(card).data('trim-start') || null,
+                        trimEnd: $(card).data('trim-end') || null
                     })
                 }
                 $(card).find('.progress').addClass("d-flex");
@@ -433,36 +465,91 @@ function toggleWhiteMode(setting) {
     $('#subtitleBtn > i').toggleClass("light-icon", value);
 }
 
-function parseURL(data) {
-    // Helper: sanitize a single URL
-    function sanitizeUrl(url) {
+async function parseURL(data) {
+    // Helper: sanitize a single URL for radio links
+    function sanitizeRadio(url) {
         if(!url || typeof url !== 'string') return url;
-        // If it's a playlist link explicitly, don't modify
-        if(url.toLowerCase().includes('&list=')) return url;
-
-        // If there's any query param that contains 'radio' (like start_radio or foo_radio),
-        // the YouTube 'radio' links generate massive playlists. In that case remove everything
-        // from the first '&' onward and keep only the video part.
         const lower = url.toLowerCase();
         if(lower.includes('radio')) {
             const ampIndex = url.indexOf('&');
-            if(ampIndex > -1) {
-                return url.substring(0, ampIndex);
-            }
+            if(ampIndex > -1) return url.substring(0, ampIndex);
         }
         return url;
     }
 
-    if(data.includes(',')) {
-        let urls = data.replaceAll(" ", "").split(",");
-        for(const rawUrl of urls) {
-            const url = sanitizeUrl(rawUrl);
-            window.main.invoke('videoAction', {action: "entry", url: url});
-        }
-    } else {
-        const url = sanitizeUrl(data);
+    // Helper to actually dispatch a sanitized or raw url
+    function dispatchUrl(url) {
+        url = url.trim();
+        if(!url) return;
+        url = sanitizeRadio(url);
         window.main.invoke('videoAction', {action: "entry", url: url});
     }
+
+    // If multiple URLs comma-separated
+    if(data.includes(',')) {
+        let urls = data.replaceAll(" ", "").split(",");
+        for(const rawUrl of urls) dispatchUrl(rawUrl);
+        return;
+    }
+
+    const original = data;
+    const lower = (original || "").toLowerCase();
+    // If it's a playlist, decide based on user preference or ask the user
+    if(lower.includes('&list=')) {
+        // Ensure we have current settings
+        await getSettings();
+
+        // If user opted to never be asked and they set a default, apply it automatically
+        if(window.settings && window.settings.playlistDefault && window.settings.playlistDefault !== 'ask' && window.settings.showPlaylistPrompt === false) {
+            if(window.settings.playlistDefault === 'video') {
+                const ampIndex = original.indexOf('&');
+                const sanitized = ampIndex > -1 ? original.substring(0, ampIndex) : original;
+                dispatchUrl(sanitized);
+                return;
+            } else if(window.settings.playlistDefault === 'playlist') {
+                window.main.invoke('videoAction', {action: "entry", url: original});
+                return;
+            }
+        }
+
+        $('#playlistOriginalUrl').text(original);
+        $('#dontAskPlaylist').prop('checked', false);
+        $('#playlistChoiceModal').modal('show');
+
+        // One-time handlers for the modal buttons
+        $('#playlistOnlyBtn').off('click').on('click', function() {
+            const dontAsk = $('#dontAskPlaylist').prop('checked');
+            $('#playlistChoiceModal').modal('hide');
+            // sanitize by removing everything from first '&' -> keep only main video
+            const ampIndex = original.indexOf('&');
+            const sanitized = ampIndex > -1 ? original.substring(0, ampIndex) : original;
+            // If user checked 'don't ask', save preference to not show prompt and default to video
+            if(dontAsk) {
+                $('#playlistDefault').val('video');
+                $('#showPlaylistPrompt').prop('checked', false);
+                sendSettings();
+            }
+            dispatchUrl(sanitized);
+        });
+
+        $('#playlistAllBtn').off('click').on('click', function() {
+            const dontAsk = $('#dontAskPlaylist').prop('checked');
+            $('#playlistChoiceModal').modal('hide');
+            // If user checked 'don't ask', save preference to not show prompt and default to playlist
+            if(dontAsk) {
+                $('#playlistDefault').val('playlist');
+                $('#showPlaylistPrompt').prop('checked', false);
+                sendSettings();
+            }
+            // dispatch the full playlist link (no sanitization)
+            window.main.invoke('videoAction', {action: "entry", url: original});
+        });
+
+        return;
+    }
+
+    // Otherwise just dispatch normally (radio sanitization applied inside dispatch)
+    dispatchUrl(data);
 }
 
 function showToast(toastInfo) {
@@ -597,7 +684,7 @@ async function addVideo(args) {
 
         $(template).find('.remove-btn').on('click', () => removeVideo(getCard(args.identifier)));
 
-        $(template).find('.download-btn').on('click', () => {
+    $(template).find('.download-btn').on('click', () => {
             let downloadArgs = {
                 action: "download",
                 url: args.url,
@@ -606,7 +693,9 @@ async function addVideo(args) {
                 encoding: $(template).find('.custom-select.download-encoding').val(),
                 audioEncoding: $(template).find('.custom-select.download-audio-encoding').val(),
                 type: $(template).find('.custom-select.download-type').val(),
-                downloadType: "single"
+                downloadType: "single",
+                trimStart: $(template).data('trim-start') || null,
+                trimEnd: $(template).data('trim-end') || null
             }
             window.main.invoke("videoAction", downloadArgs)
             $('#downloadBtn, #clearBtn').prop("disabled", true);
@@ -622,6 +711,34 @@ async function addVideo(args) {
             }
         });
 
+        // The cut button should only be visible once metadata is analyzed
+        $(template).find('.cut-btn').hide();
+
+        // Per-card quick-download (respect current selects and trims)
+        $(template).find('.cut-download-btn').on('click', () => {
+            const downloadArgs = {
+                action: 'download',
+                url: args.url,
+                identifier: args.identifier,
+                format: $(template).find('.custom-select.download-quality').val(),
+                encoding: $(template).find('.custom-select.download-encoding').val(),
+                audioEncoding: $(template).find('.custom-select.download-audio-encoding').val(),
+                type: $(template).find('.custom-select.download-type').val(),
+                downloadType: 'single',
+                trimStart: $(template).data('trim-start') || null,
+                trimEnd: $(template).data('trim-end') || null
+            };
+            window.main.invoke('videoAction', downloadArgs);
+            $('#downloadBtn, #clearBtn').prop('disabled', true);
+            $(template).find('.progress').addClass('d-flex');
+            $(template).find('.metadata.left').html('<strong>Velocidade: </strong>' + '0.00MiB/s').show();
+            $(template).find('.metadata.right').html('<strong>ETA: </strong>' + 'Unknown').show();
+            $(template).find('.options').addClass('d-flex');
+            $(template).find('select').addClass('d-none');
+            $(template).find('.download-btn i, .download-btn, .subtitle-btn, .subtitle-btn i').addClass('disabled');
+            changeDownloadIconToLog(template);
+        });
+
         $(template).find('.subtitle-btn').on('click', () => {
             showSubtitleModal(args.identifier, template);
         });
@@ -635,6 +752,255 @@ async function addVideo(args) {
         });
         $(template).find('.open .item').on('click', () => {
             window.main.invoke("videoAction", {action: "open", identifier: args.identifier, type: "item"});
+        });
+        $(template).find('.cut-btn').on('click', () => {
+            // Respect global UI toggle: prevent opening cut modal when disabled
+            if(window.disableCutUI) return;
+            // Open cut modal for this card
+            const id = args.identifier;
+            const card = getCard(id);
+            // Populate inputs from current video state if available
+            const video = window.settings ? null : null; // placeholder, we'll fetch metadata from DOM
+            // Show modal and store current identifier
+            if($('#cutModal').find('.identifier').length) {
+                $('#cutModal').find('.identifier').val(id);
+            } else {
+                $('#cutModal').append(`<input type="hidden" class="identifier" value="${id}">`);
+            }
+            // If we have the card duration displayed, try to parse it
+            const durationText = $(card).find('.metadata.left').text();
+            // Set default start/end
+            $('#cutStart').val('00:00:00');
+            $('#cutEnd').val($(card).find('.metadata.left').text().match(/\d{2}:\d{2}:\d{2}/) ? $(card).find('.metadata.left').text().match(/\d{2}:\d{2}:\d{2}/)[0] : '00:00:00');
+            // Build interactive timeline inside the modal
+            const track = $('#cutModal .timeline-track');
+            track.empty();
+            const duration = args.durationSeconds || 0;
+
+            // Helper to clamp percent
+            const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+            // Create selected region and handles
+        const selected = $('<div class="timeline-selected"></div>');
+        const handleLeft = $('<div class="timeline-handle left"></div>');
+        const handleRight = $('<div class="timeline-handle right"></div>');
+        const tooltipLeft = $('<div class="timeline-tooltip d-none"></div>');
+        const tooltipRight = $('<div class="timeline-tooltip d-none"></div>');
+            track.append(selected).append(handleLeft).append(handleRight);
+        track.append(tooltipLeft).append(tooltipRight);
+
+            // Convert current card trims (if any) to percent
+            const currentStart = $(card).data('trim-start') || '00:00:00';
+            const currentEnd = $(card).data('trim-end') || (args.duration || '00:00:00');
+            const timeToSeconds = (s) => {
+                if(!s) return 0;
+                const parts = s.split(':').map(x => parseFloat(x));
+                if(parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+                if(parts.length === 2) return parts[0]*60 + parts[1];
+                return parts[0];
+            }
+            const secondsToTime = (sec) => {
+                if(sec == null || isNaN(sec)) sec = 0;
+                sec = Math.floor(sec);
+                const h = Math.floor(sec / 3600).toString().padStart(2,'0');
+                const m = Math.floor((sec % 3600) / 60).toString().padStart(2,'0');
+                const s = Math.floor(sec % 60).toString().padStart(2,'0');
+                return `${h}:${m}:${s}`;
+            }
+
+        const totalSec = duration || timeToSeconds(args.duration || '0');
+        // Persist numeric duration on the timeline element for validation later
+        track.data('duration', totalSec);
+            let startSec = clamp(timeToSeconds(currentStart), 0, totalSec);
+            let endSec = clamp(timeToSeconds(currentEnd), 0, totalSec);
+            if(endSec <= startSec) endSec = Math.min(totalSec, startSec + 1);
+
+            // positioning
+            const updatePositions = () => {
+                const width = track.width();
+                const leftPct = (startSec / Math.max(1, totalSec)) * 100;
+                const rightPct = (endSec / Math.max(1, totalSec)) * 100;
+                handleLeft.css('left', `calc(${leftPct}% - 7px)`);
+                handleRight.css('left', `calc(${rightPct}% - 7px)`);
+                selected.css({left: `${leftPct}%`, width: `${Math.max(0, rightPct - leftPct)}%`});
+                $('#cutStart').val(secondsToTime(startSec));
+                $('#cutEnd').val(secondsToTime(endSec));
+                // Update tooltips positions/content
+                tooltipLeft.text(secondsToTime(startSec)).css('left', `${leftPct}%`);
+                tooltipRight.text(secondsToTime(endSec)).css('left', `${rightPct}%`);
+            }
+
+            updatePositions();
+
+            // Dragging
+            let dragging = null;
+            const onMouseDown = (evt, which) => {
+                evt.preventDefault();
+                dragging = which;
+                $(document).on('mousemove.cut', onMouseMove);
+                $(document).on('mouseup.cut', onMouseUp);
+            }
+            const onMouseMove = (e) => {
+                if(!dragging) return;
+                const rect = track[0].getBoundingClientRect();
+                let x = e.clientX - rect.left;
+                x = clamp(x, 0, rect.width);
+                const pct = x / rect.width;
+                const sec = pct * totalSec;
+                if(dragging === 'left') {
+                    startSec = Math.min(sec, endSec - 0.1);
+                } else if(dragging === 'right') {
+                    endSec = Math.max(sec, startSec + 0.1);
+                }
+                updatePositions();
+                // Show tooltip while dragging
+                if(dragging === 'left') {
+                    tooltipLeft.removeClass('d-none');
+                } else if(dragging === 'right') {
+                    tooltipRight.removeClass('d-none');
+                }
+            }
+            const onMouseUp = () => {
+                $(document).off('.cut');
+                dragging = null;
+                tooltipLeft.addClass('d-none');
+                tooltipRight.addClass('d-none');
+            }
+            handleLeft.off('mousedown').on('mousedown', (e) => onMouseDown(e, 'left'));
+            handleRight.off('mousedown').on('mousedown', (e) => onMouseDown(e, 'right'));
+
+            // Sync inputs -> handles
+            $('#cutStart').off('input').on('input', () => {
+                const val = $('#cutStart').val();
+                const s = timeToSeconds(val);
+                startSec = clamp(s, 0, totalSec);
+                if(startSec >= endSec) startSec = Math.max(0, endSec - 1);
+                updatePositions();
+            });
+            $('#cutEnd').off('input').on('input', () => {
+                const val = $('#cutEnd').val();
+                const s = timeToSeconds(val);
+                endSec = clamp(s, 0, totalSec);
+                if(endSec <= startSec) endSec = Math.min(totalSec, startSec + 1);
+                updatePositions();
+            });
+
+            $('#cutModal').modal('show');
+        });
+
+        // When user applies the cut in the modal, persist times on the card
+        $('#cutApplyBtn').off('click').on('click', () => {
+            const id = $('#cutModal').find('.identifier').val();
+            const card = getCard(id);
+            const start = $('#cutStart').val();
+            const end = $('#cutEnd').val();
+            // Validate: at least 1 second and within duration
+            const timeToSeconds = (s) => {
+                if(!s) return 0;
+                const parts = s.split(':').map(x => parseFloat(x));
+                if(parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+                if(parts.length === 2) return parts[0]*60 + parts[1];
+                return parts[0];
+            }
+            const startSec = timeToSeconds(start);
+            const endSec = timeToSeconds(end);
+            const totalSec = ($('#cutModal').find('.timeline-track').data('duration') || (() => {
+                const m = $(card).find('.metadata.left').text().match(/(\d{2}:\d{2}:\d{2}|\d{1,2}:\d{2})/);
+                return m ? (m[0].split(':').length === 3 ? (m[0].split(':')[0]*3600 + m[0].split(':')[1]*60 + parseInt(m[0].split(':')[2])) : (m[0].split(':')[0]*60 + parseInt(m[0].split(':')[1]))) : 0;
+            })());
+            const isValid = endSec - startSec >= 1 && startSec >= 0 && endSec <= totalSec;
+            if(!isValid) {
+                $('#cutError').removeClass('d-none');
+                return;
+            }
+            $('#cutError').addClass('d-none');
+            if(card) {
+                $(card).data('trim-start', start);
+                $(card).data('trim-end', end);
+                // Show a small badge on the card to indicate trimming is set
+                if($(card).find('.cut-badge').length === 0) {
+                    $(card).find('.card-title').append(' <span class="badge badge-pill badge-info cut-badge">Cortado</span>');
+                }
+                const intervalText = `<span class="cut-interval small text-muted"> Corte: ${start} → ${end}</span>`;
+                if($(card).find('.cut-interval').length === 0) {
+                    $(card).find('.card-title').append(' ' + intervalText);
+                } else {
+                    $(card).find('.cut-interval').replaceWith(intervalText);
+                }
+            }
+            $('#cutModal').modal('hide');
+        });
+
+        // Apply and Download: persist trims then trigger a single download
+        $('#cutApplyDownloadBtn').off('click').on('click', () => {
+            const id = $('#cutModal').find('.identifier').val();
+            const card = getCard(id);
+            const start = $('#cutStart').val();
+            const end = $('#cutEnd').val();
+            const timeToSeconds = (s) => {
+                if(!s) return 0;
+                const parts = s.split(':').map(x => parseFloat(x));
+                if(parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+                if(parts.length === 2) return parts[0]*60 + parts[1];
+                return parts[0];
+            }
+            const startSec = timeToSeconds(start);
+            const endSec = timeToSeconds(end);
+            const totalSec = ($('#cutModal').find('.timeline-track').data('duration') || 0);
+            const isValid = endSec - startSec >= 1 && startSec >= 0 && endSec <= totalSec;
+            if(!isValid) {
+                $('#cutError').removeClass('d-none');
+                return;
+            }
+            $('#cutError').addClass('d-none');
+            if(card) {
+                $(card).data('trim-start', start);
+                $(card).data('trim-end', end);
+                if($(card).find('.cut-badge').length === 0) {
+                    $(card).find('.card-title').append(' <span class="badge badge-pill badge-info cut-badge">Cortado</span>');
+                }
+                const intervalText = `<span class="cut-interval small text-muted"> Corte: ${start} → ${end}</span>`;
+                if($(card).find('.cut-interval').length === 0) {
+                    $(card).find('.card-title').append(' ' + intervalText);
+                } else {
+                    $(card).find('.cut-interval').replaceWith(intervalText);
+                }
+            }
+            $('#cutModal').modal('hide');
+            // Trigger download for this single card
+            const downloadArgs = {
+                action: 'download',
+                url: $(card).find('.url').val() || null,
+                identifier: id,
+                format: $(card).find('.custom-select.download-quality').val(),
+                encoding: $(card).find('.custom-select.download-encoding').val(),
+                audioEncoding: $(card).find('.custom-select.download-audio-encoding').val(),
+                type: $(card).find('.custom-select.download-type').val(),
+                downloadType: 'single',
+                trimStart: $(card).data('trim-start') || null,
+                trimEnd: $(card).data('trim-end') || null
+            };
+            window.main.invoke('videoAction', downloadArgs);
+            // Mirror the single-card download UI updates so the user sees the action
+            $('#downloadBtn, #clearBtn').prop('disabled', true);
+            if(card) {
+                $(card).find('.progress').addClass('d-flex');
+                $(card).find('.metadata.left').html('<strong>Velocidade: </strong>' + '0.00MiB/s').show();
+                $(card).find('.metadata.right').html('<strong>ETA: </strong>' + 'Unknown').show();
+                $(card).find('.options').addClass('d-flex');
+                $(card).find('select').addClass('d-none');
+                $(card).find('.download-btn i, .download-btn, .subtitle-btn, .subtitle-btn i').addClass('disabled');
+                changeDownloadIconToLog(card);
+            }
+        });
+
+        // Re-show legal modal from settings
+        $('#reShowLegalBtn').off('click').on('click', async () => {
+            // Clear flag and show modal
+            await getSettings();
+            window.settings.hasSeenLegalModal = false;
+            await window.main.invoke('settingsAction', {action: 'save', settings: window.settings});
+            $('#legalNoticeModal').modal('show');
         });
 
     } else if(args.type === "metadata") {
@@ -674,7 +1040,11 @@ async function addVideo(args) {
         $(template).find('img').on('load error', () => resolve());
     }).then(() => {
         $('.video-cards').prepend(template);
-        if(args.type === "single") updateVideoSettings(args.identifier);
+        if(args.type === "single") {
+            updateVideoSettings(args.identifier);
+            // Show cut controls now that metadata is present
+            $(template).find('.cut-btn, .cut-download-btn').show();
+        }
     });
 
 }
@@ -744,7 +1114,9 @@ async function setUnifiedPlaylist(args) {
             type: $(card).find('.custom-select.download-type').val(),
             encoding: $(card).find('.custom-select.download-encoding').val(),
             audioEncoding: $(card).find('.custom-select.download-audio-encoding').val(),
-            downloadType: "unified"
+            downloadType: "unified",
+            trimStart: $(card).data('trim-start') || null,
+            trimEnd: $(card).data('trim-end') || null
         }
         window.main.invoke("videoAction", downloadArgs);
         $('#downloadBtn, #clearBtn').prop("disabled", true);
@@ -843,6 +1215,10 @@ function updateProgress(args) {
             $(card).find('.progress-bar').removeClass("progress-bar-striped")
             $(card).find('.open').addClass("d-flex");
             if(window.settings.nameFormatMode === "custom") $(card).find('.open .item').prop("disabled", true)
+            // After download, remove the explicit 'Reproduzir' button (item) and keep only folder-open
+            $(card).find('.open .item').addClass('d-none');
+            // Hide the cut and download action buttons since they don't apply anymore
+            $(card).find('.cut-btn, .cut-download-btn').addClass('d-none');
         }
         changeSubsToRetry(args.url, card);
         return;
@@ -1009,6 +1385,8 @@ async function getSettings() {
     $('#taskList').prop('checked', settings.taskList);
     $('#autoFillClipboard').prop('checked', settings.autoFillClipboard);
     $('#noPlaylist').prop('checked', settings.noPlaylist);
+    $('#playlistDefault').val(settings.playlistDefault || 'ask');
+    $('#showPlaylistPrompt').prop('checked', settings.showPlaylistPrompt == null ? true : settings.showPlaylistPrompt);
     $('#globalShortcut').prop('checked', settings.globalShortcut);
     $('#ratelimitSetting').val(settings.rateLimit);
     $('#proxySetting').val(settings.proxy);
@@ -1063,6 +1441,8 @@ function sendSettings() {
         calculateTotalSize: $('#calculateTotalSize').prop('checked'),
         sizeMode: $('#sizeSetting').val(),
         splitMode: $('#splitMode').val(),
+    playlistDefault: $('#playlistDefault').val(),
+    showPlaylistPrompt: $('#showPlaylistPrompt').prop('checked'),
         rateLimit: $('#ratelimitSetting').val(),
         maxConcurrent: parseInt($('#maxConcurrent').val()),
         retries: $('#settingsModal #retries').val(),

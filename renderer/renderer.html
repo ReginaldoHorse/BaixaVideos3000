@@ -138,6 +138,12 @@
                     <button class="btn btn-dark item">Reproduzir</button>
                 </div>
             </div>
+            <div class="row mt-2 cut-row">
+                <div class="col-12 d-flex align-items-center">
+                    <button class="btn btn-outline-primary cut-btn">Cortar trecho</button>
+                    <button class="btn btn-highlight ml-2 cut-download-btn">Baixar</button>
+                </div>
+            </div>
             <div class="row error d-none">
                 <div class="col-6">
                     <button id="fullError" class="btn btn-dark">Mostrar erro completo</button>
@@ -220,6 +226,88 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn subsSave btn-dark" >Ok</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Playlist choice modal: ask user if they want only the main video or the full playlist -->
+<div class="modal fade" id="playlistChoiceModal" tabindex="-1" aria-labelledby="playlistChoiceLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="playlistChoiceLabel">Playlist detectada</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Este link contém uma playlist. Deseja baixar apenas o vídeo principal ou a playlist inteira?</p>
+                <p class="small text-muted" id="playlistOriginalUrl"></p>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" value="" id="dontAskPlaylist">
+                    <label class="form-check-label small" for="dontAskPlaylist">Não perguntar novamente</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="playlistOnlyBtn" class="btn btn-highlight">Somente o vídeo</button>
+                <button type="button" id="playlistAllBtn" class="btn btn-dark">Baixar a playlist inteira</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Legal notice shown on first run -->
+<div class="modal fade" id="legalNoticeModal" tabindex="-1" aria-labelledby="legalNoticeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="legalNoticeLabel">Aviso importante</h5>
+                <button type="button" class="close dismiss" data-dismiss="modal" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Nosso combinado sobre o BaixaVideos3000:</p>
+                <p>Nós não incentivamos o uso do nosso app para qualquer atividade ilegal, como violar direitos autorais de vídeos ou músicas.</p>
+                <p>O uso do BaixaVideos3000 é de sua total responsabilidade. Você responde pelos seus atos.</p>
+                <p>Este é um aviso legal para proteger os desenvolvedores do projeto. Use com consciência!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary dismiss">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cut modal: select start/end for trimming a video -->
+<div class="modal fade" id="cutModal" tabindex="-1" aria-labelledby="cutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cutModalLabel">Cortar trecho</h5>
+                <button type="button" class="close dismiss" data-dismiss="modal" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">Use os controles para selecionar o início e o fim do trecho que deseja extrair.</p>
+                <div class="cut-timeline mb-3" style="height:56px; background:#1f1f1f; border:1px solid #2b2b2b; border-radius:6px; display:flex; align-items:center; padding:8px;">
+                    <!-- Placeholder: the actual interactive timeline will be built by JS -->
+                    <div class="timeline-track w-100" style="position:relative; height:40px; background:linear-gradient(90deg,#2a2a2a,#222); border-radius:4px;"></div>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <label class="form-label">Início (hh:mm:ss)</label>
+                        <input id="cutStart" class="form-control" value="00:00:00">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Fim (hh:mm:ss)</label>
+                        <input id="cutEnd" class="form-control" value="00:00:00">
+                    </div>
+                </div>
+                <div class="mt-2"><small id="cutError" class="text-danger d-none">O trecho deve ter pelo menos 1 segundo e estar dentro da duração do vídeo.</small></div>
+                <div class="mt-3 small text-muted">Dica: você pode arrastar os marcadores na linha do tempo para escolher com precisão.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cutApplyBtn" class="btn btn-primary">Aplicar corte</button>
+                <button type="button" id="cutApplyDownloadBtn" class="btn btn-highlight">Aplicar corte e Baixar</button>
+                <button type="button" class="btn btn-secondary dismiss" data-dismiss="modal">Cancelar</button>
             </div>
         </div>
     </div>
@@ -330,9 +418,24 @@
                     <input class="check-input" type="checkbox" value="" id="noPlaylist">
                     <label class="check-label" for="noPlaylist">Baixar apenas o vídeo quando o link contiver lista e vídeo</label>
                 </div>
+                <div class="mb-2">
+                    <label for="playlistDefault" class="form-label">Quando um link contém playlist:</label>
+                    <select class="custom-select d-block rounded w-auto mb-2" id="playlistDefault">
+                        <option value="ask" selected>Perguntar sempre</option>
+                        <option value="video">Baixar somente o vídeo</option>
+                        <option value="playlist">Baixar a playlist inteira</option>
+                    </select>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" value="" id="showPlaylistPrompt">
+                        <label class="form-check-label small" for="showPlaylistPrompt">Mostrar sempre o prompt de playlist</label>
+                    </div>
+                </div>
                 <div class="mb-1">
                     <input class="check-input" type="checkbox" value="" id="globalShortcut">
                     <label class="check-label" for="globalShortcut">Ativar atalhos globais de colar e baixar</label>
+                </div>
+                <div class="mb-3">
+                    <button id="reShowLegalBtn" class="btn btn-outline-light">Reexibir aviso legal</button>
                 </div>
                 <hr/>
                 <h3>Saída</h3>

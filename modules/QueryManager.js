@@ -22,27 +22,66 @@ class QueryManager {
         this.playlistMetadata = [];
     }
 
+    // Sanitize incoming URLs so radio links are truncated and playlist handling
+    // respects the user's saved preference in settings. This ensures any code
+    // path that calls manage() can't bypass sanitization.
+    sanitizeUrl(u) {
+        if(!u || typeof u !== 'string') return u;
+        let out = u.trim();
+        const lower = out.toLowerCase();
+
+        // If it's a radio style link (contains 'radio' in URL), truncate at
+        // the first ampersand to avoid expanding into huge auto-playlists.
+        if(lower.includes('radio')) {
+            const ampIndex = out.indexOf('&');
+            if(ampIndex > -1) out = out.substring(0, ampIndex);
+            return out;
+        }
+
+        // If it contains a playlist parameter, consult settings. If the user
+        // has chosen to default to the single video, strip the query part.
+        try {
+            const hasList = /[?&]list=/i.test(out);
+            if(hasList) {
+                const pref = this.environment && this.environment.settings ? this.environment.settings.playlistDefault : null;
+                if(pref === 'video') {
+                    const ampIndex = out.indexOf('&');
+                    if(ampIndex > -1) out = out.substring(0, ampIndex);
+                }
+                // If pref is 'playlist' or 'ask' we leave the link as-is so
+                // downstream logic (renderer prompt or default playlist flow)
+                // can handle it.
+            }
+        } catch(e) {
+            // Silently ignore and return original URL in case of unexpected errors
+        }
+
+        return out;
+    }
+
     async manage(url) {
-        let metadataVideo = new Video(url, "metadata", this.environment);
+        // Ensure URL is sanitized by main-process policy (radio truncation, playlist default)
+        const sanitizedUrl = this.sanitizeUrl(url);
+        let metadataVideo = new Video(sanitizedUrl, "metadata", this.environment);
         this.addVideo(metadataVideo);
-        const initialQuery = await new InfoQuery(url, metadataVideo.identifier, this.environment).connect();
+        const initialQuery = await new InfoQuery(sanitizedUrl, metadataVideo.identifier, this.environment).connect();
         if(metadataVideo.error) return;
-        if(Utils.isYouTubeChannel(url)) {
+        if(Utils.isYouTubeChannel(sanitizedUrl)) {
             const actualQuery = await new InfoQuery(initialQuery.entries[0].url, metadataVideo.identifier, this.environment).connect();
             if(metadataVideo.error) return;
             this.removeVideo(metadataVideo);
-            if(actualQuery.entries == null || actualQuery.entries.length === 0) this.managePlaylist(initialQuery, url);
+            if(actualQuery.entries == null || actualQuery.entries.length === 0) this.managePlaylist(initialQuery, sanitizedUrl);
             else this.managePlaylist(actualQuery, initialQuery.entries[0].url);
             return;
         }
 
         switch(Utils.detectInfoType(initialQuery)) {
             case "single":
-                this.manageSingle(initialQuery, url);
+                this.manageSingle(initialQuery, sanitizedUrl);
                 this.removeVideo(metadataVideo);
                 break;
             case "playlist":
-                this.managePlaylist(initialQuery, url);
+                this.managePlaylist(initialQuery, sanitizedUrl);
                 this.removeVideo(metadataVideo);
                 break;
             case "livestream":
@@ -128,6 +167,7 @@ class QueryManager {
             url: video.url,
             title: video.title,
             duration: video.duration,
+            durationSeconds: video.durationSeconds,
             audioOnly: video.audioOnly,
             subtitles: video.downloadSubs,
             loadSize: this.environment.settings.sizeMode === "full",
@@ -142,6 +182,9 @@ class QueryManager {
 
     downloadVideo(args) {
         let downloadVideo = this.getVideo(args.identifier);
+        // Apply trim instructions if provided
+        if(args.trimStart != null) downloadVideo.trimStart = args.trimStart;
+        if(args.trimEnd != null) downloadVideo.trimEnd = args.trimEnd;
         downloadVideo.selectedEncoding = args.encoding;
         downloadVideo.selectedAudioEncoding = args.audioEncoding;
         downloadVideo.audioOnly = args.type === "audio";
@@ -173,6 +216,9 @@ class QueryManager {
         let videoMetadata = [];
         for(const videoObj of args.videos) {
             let video = this.getVideo(videoObj.identifier);
+            // Apply per-video trim instructions if provided from the renderer
+            if(videoObj.trimStart != null) video.trimStart = videoObj.trimStart;
+            if(videoObj.trimEnd != null) video.trimEnd = videoObj.trimEnd;
             video.selectedEncoding = videoObj.encoding;
             video.selectedAudioEncoding = videoObj.audioEncoding;
             if(video.videos == null) {
@@ -200,6 +246,9 @@ class QueryManager {
                 unifiedPlaylists.push(video);
                 this.getUnifiedVideos(video, video.videos, videoObj.type === "audio", videoObj.format, videoObj.downloadSubs);
                 for(const unifiedVideo of video.videos) {
+                    // If the unified playlist entry had trimming info, propagate it to each child video
+                    if(videoObj.trimStart != null) unifiedVideo.trimStart = videoObj.trimStart;
+                    if(videoObj.trimEnd != null) unifiedVideo.trimEnd = videoObj.trimEnd;
                     const videoMeta = Utils.getVideoInPlaylistMetadata(unifiedVideo.url, video.url, this.playlistMetadata);
                     if(videoMeta != null) {
                         videoMetadata.push(videoMeta);
@@ -374,18 +423,24 @@ class QueryManager {
             return;
         }
         if(file == null) {
-            fs.readdir(video.downloadedPath, (err, files) => {
+            try {
+                const files = await fs.promises.readdir(video.downloadedPath);
                 for (const searchFile of files) {
-                    if (searchFile.substr(0, searchFile.lastIndexOf(".")) === video.getFilename()) {
+                    const base = searchFile.substring(0, searchFile.lastIndexOf('.'));
+                    if (base === video.getFilename()) {
                         file = searchFile;
                         break;
                     }
                 }
-                if(file == null) {
+                if (file == null) {
                     fallback = true;
                     file = video.getFilename() + ".mp4";
                 }
-            });
+            } catch (err) {
+                // If we couldn't read the directory, fallback to constructed filename
+                fallback = true;
+                file = video.getFilename() + ".mp4";
+            }
         }
         if(args.type === "folder") {
             if(fallback) {
@@ -401,15 +456,16 @@ class QueryManager {
     }
 
     async verifyOpenVideoFilepath(video, file) {
-        const videoPath = path.join(video.downloadedPath, file);
+        const videoPath = path.resolve(path.join(video.downloadedPath, file));
         try {
-            await fs.promises.access(videoPath)
-            return path.join(video.downloadedPath, file);
+            await fs.promises.access(videoPath);
+            return videoPath;
         } catch (e) {
             let extension = file.substring(file.lastIndexOf('.'), file.length);
-            if(!extension) extension = '.mp4';
-            //Fallback to original method if file doesnt exist.
-            return path.join(video.downloadedPath, video.getFilename() + extension);
+            if(!extension || extension.indexOf('.') === -1) extension = '.mp4';
+            //Fallback to constructed filename
+            const fallbackPath = path.resolve(path.join(video.downloadedPath, video.getFilename() + extension));
+            return fallbackPath;
         }
     }
 

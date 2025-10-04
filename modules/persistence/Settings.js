@@ -9,7 +9,8 @@ class Settings {
         validateCertificate, enableEncoding, taskList, nameFormat, nameFormatMode,
         sizeMode, splitMode, maxConcurrent, retries, fileAccessRetries, updateBinary, downloadType, updateApplication, cookiePath,
         statSend, sponsorblockMark, sponsorblockRemove, sponsorblockApi, downloadMetadata, downloadJsonMetadata,
-        downloadThumbnail, keepUnmerged, avoidFailingToSaveDuplicateFileName, calculateTotalSize, theme
+        downloadThumbnail, keepUnmerged, avoidFailingToSaveDuplicateFileName, calculateTotalSize, theme,
+        playlistDefault, showPlaylistPrompt, hasSeenLegalModal
     ) {
         this.paths = paths;
         this.env = env
@@ -47,6 +48,10 @@ class Settings {
         this.cookiePath = cookiePath;
         this.statSend = statSend == null ? false : statSend;
         this.theme = theme == null ? "dark" : theme;
+        // Playlist prompt behavior: 'ask' | 'video' | 'playlist'
+        this.playlistDefault = playlistDefault == null ? "ask" : playlistDefault;
+        this.showPlaylistPrompt = showPlaylistPrompt == null ? true : showPlaylistPrompt;
+        this.hasSeenLegalModal = hasSeenLegalModal == null ? false : hasSeenLegalModal;
         this.setGlobalShortcuts();
     }
 
@@ -101,6 +106,7 @@ class Settings {
                 data.avoidFailingToSaveDuplicateFileName,
                 data.calculateTotalSize,
                 data.theme
+                , data.playlistDefault, data.showPlaylistPrompt, data.hasSeenLegalModal
             );
         } catch(err) {
             console.log(err);
@@ -146,6 +152,9 @@ class Settings {
         this.downloadType = settings.downloadType;
         this.updateApplication = settings.updateApplication;
         this.theme = settings.theme;
+    // Playlist prompt behaviour
+    this.playlistDefault = settings.playlistDefault;
+    this.showPlaylistPrompt = settings.showPlaylistPrompt;
         this.save();
 
         //Prevent installing already downloaded updates on app close.
@@ -190,6 +199,9 @@ class Settings {
             avoidFailingToSaveDuplicateFileName: this.avoidFailingToSaveDuplicateFileName,
             calculateTotalSize: this.calculateTotalSize,
             theme: this.theme,
+            playlistDefault: this.playlistDefault,
+            showPlaylistPrompt: this.showPlaylistPrompt,
+            hasSeenLegalModal: this.hasSeenLegalModal,
             version: this.env.version
         }
     }

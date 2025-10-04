@@ -36,7 +36,7 @@ class DownloadQuery extends Query {
             } else if(audioQuality === "worst") {
                 audioQuality = "9";
             }
-            const audioOutputFormat = "mp3";
+            const audioOutputFormat = this.environment.settings.audioOutputFormat || "mp3";
             args = [
                 '--extract-audio', '--audio-quality', audioQuality,
                 '--ffmpeg-location', this.environment.paths.ffmpeg,
@@ -53,10 +53,31 @@ class DownloadQuery extends Query {
                 args.push("bestaudio[ext=m4a]/bestaudio");
             }
             if(audioOutputFormat !== "none") {
-            
                 args.push('--audio-format', audioOutputFormat);
             }
+            // If a trim is requested for audio-only, pass trimming args to ffmpeg via postprocessor-args
+            if((this.video.trimStart != null || this.video.trimEnd != null) && audioOutputFormat !== "none") {
+                args.push('--postprocessor-args');
+                let postArgs = '';
+                if(this.video.trimStart) postArgs += `-ss ${this.video.trimStart} `;
+                if(this.video.trimEnd) postArgs += `-to ${this.video.trimEnd} `;
+                // encode to requested audio format
+                if(audioOutputFormat === 'mp3') {
+                    postArgs += '-c:a libmp3lame -b:a 192k -progress pipe:1 -nostats';
+                } else if(audioOutputFormat === 'm4a' || audioOutputFormat === 'aac') {
+                    postArgs += '-c:a aac -b:a 192k -progress pipe:1 -nostats';
+                } else {
+                    postArgs += '-progress pipe:1 -nostats';
+                }
+                // Log the postprocessor args for debugging
+                try { this.environment.logger.log(this.video.identifier, '[postArgs][audio] ' + postArgs); } catch(e) {}
+                // Ensure args are routed to ffmpeg post-processor explicitly
+                args.push('ffmpeg:' + postArgs.trim());
+            }
             if(audioOutputFormat === "m4a" || audioOutputFormat === "mp3" || audioOutputFormat === "none") {
+                // Ensure thumbnails are converted to PNG before embedding to reduce failures
+                args.push("--convert-thumbnails");
+                args.push("png");
                 args.push("--embed-thumbnail");
             }
         } else {
@@ -114,10 +135,28 @@ class DownloadQuery extends Query {
                 if (this.environment.settings.outputFormat === "mp4") {
                     // Re-encode video to H.264 and audio to AAC to ensure editor compatibility
                     args.push('--postprocessor-args');
-                    args.push('-c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k -progress pipe:1 -nostats');
+                    let postArgs = '-c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 192k -progress pipe:1 -nostats';
+                    if(this.video.trimStart != null || this.video.trimEnd != null) {
+                        // Prefix trimming args so they appear together before encoding flags
+                        let trimPrefix = '';
+                        if(this.video.trimStart) trimPrefix += `-ss ${this.video.trimStart} `;
+                        if(this.video.trimEnd) trimPrefix += `-to ${this.video.trimEnd} `;
+                        postArgs = trimPrefix + postArgs;
+                    }
+                    // Log the postprocessor args for debugging
+                    try { this.environment.logger.log(this.video.identifier, '[postArgs][video] ' + postArgs); } catch(e) {}
+                    // Ensure args are routed to ffmpeg post-processor explicitly
+                    args.push('ffmpeg:' + postArgs.trim());
                 } else if (this.environment.settings.audioOutputFormat === "mp3") {
                     args.push('--postprocessor-args');
-                    args.push('-c:a libmp3lame -b:a 192k -progress pipe:1 -nostats');
+                    let postArgs = '-c:a libmp3lame -b:a 192k -progress pipe:1 -nostats';
+                    if(this.video.trimStart != null || this.video.trimEnd != null) {
+                        if(this.video.trimStart) postArgs = `-ss ${this.video.trimStart} ` + postArgs;
+                        if(this.video.trimEnd) postArgs = postArgs + ` -to ${this.video.trimEnd}`;
+                    }
+                    try { this.environment.logger.log(this.video.identifier, '[postArgs][audio-branch] ' + postArgs); } catch(e) {}
+                    // Ensure args are routed to ffmpeg post-processor explicitly
+                    args.push('ffmpeg:' + postArgs.trim());
                 }
             } else {
                 args = [
@@ -171,7 +210,9 @@ class DownloadQuery extends Query {
         let destinationCount = 0;
         let initialReset = false;
         let result = null;
-        try {
+            try {
+            // Log the full args we will call yt-dlp with for debugging
+            try { this.environment.logger.log(this.video.identifier, '[yt-dlp args] ' + JSON.stringify(args)); } catch(e) {}
             result = await this.environment.downloadLimiter.schedule(() => this.start(this.url, args, (liveData) => {
                 this.environment.logger.log(this.video.identifier, liveData);
                 this.video.setFilename(liveData);
@@ -280,17 +321,39 @@ class DownloadQuery extends Query {
                 this.progressBar.updateDownload(percentage, eta, speed, this.video.audioOnly || this.video.downloadingAudio);
             }));
         } catch (exception) {
-            this.environment.errorHandler.checkError(exception, this.video.identifier);
-            // Clear any ffmpeg message timers
-            if(this._ffmpegMessageTimeout) {
-                clearTimeout(this._ffmpegMessageTimeout);
-                this._ffmpegMessageTimeout = null;
+            // Some post-processing errors (thumbnail conversion/embed) should not
+            // fail the entire download. Detect common thumbnail/embed related
+            // messages and treat them as non-fatal: log and continue.
+            const msg = String(exception || "");
+            const thumbnailErrorIndicators = [
+                'EmbedThumbnail', 'Adding thumbnail', 'ThumbnailsConvertor', 'Conversion failed', 'Cannot find', 'Cannot update utime', 'Cannot open'
+            ];
+            const isThumbnailError = thumbnailErrorIndicators.some(ind => msg.includes(ind));
+            if(isThumbnailError) {
+                try { this.environment.logger.log(this.video.identifier, '[nonfatal postproc error] ' + msg); } catch(e) {}
+                // Clear any ffmpeg message timers
+                if(this._ffmpegMessageTimeout) {
+                    clearTimeout(this._ffmpegMessageTimeout);
+                    this._ffmpegMessageTimeout = null;
+                }
+                if(this._ffmpegMessageInterval) {
+                    clearInterval(this._ffmpegMessageInterval);
+                    this._ffmpegMessageInterval = null;
+                }
+                // continue as if successful (do not return exception)
+            } else {
+                this.environment.errorHandler.checkError(exception, this.video.identifier);
+                // Clear any ffmpeg message timers
+                if(this._ffmpegMessageTimeout) {
+                    clearTimeout(this._ffmpegMessageTimeout);
+                    this._ffmpegMessageTimeout = null;
+                }
+                if(this._ffmpegMessageInterval) {
+                    clearInterval(this._ffmpegMessageInterval);
+                    this._ffmpegMessageInterval = null;
+                }
+                return exception;
             }
-            if(this._ffmpegMessageInterval) {
-                clearInterval(this._ffmpegMessageInterval);
-                this._ffmpegMessageInterval = null;
-            }
-            return exception;
         }
 
         if(this.video.audioOnly) {
@@ -308,7 +371,92 @@ class DownloadQuery extends Query {
         }
 
         if(this.environment.settings.avoidFailingToSaveDuplicateFileName) {
-            this.environment.paths.moveFile(downloadFolderPath, this.environment.settings.downloadPath, this.video.getFilename());
+            // Determine the actual filename to move. Prefer the filename reported
+            // by yt-dlp/ffmpeg (this.video.filename). If that's not present yet,
+            // attempt to discover a file in the temp folder that matches the
+            // expected base name. Retry a few times because ffmpeg may still be
+            // finalizing the file when this block runs in racey environments.
+            const expectedBase = this.video.getFilename();
+            const maxRetries = 10;
+            const retryDelayMs = 300;
+            const pathJoin = require('path').join;
+            let candidate = this.video.filename;
+
+            // Determine expected extension for better matching (no leading dot)
+            const expectedExt = this.video.audioOnly ? (this.environment.settings.audioOutputFormat || 'mp3') : (this.environment.settings.outputFormat && this.environment.settings.outputFormat !== 'none' ? this.environment.settings.outputFormat : 'mp4');
+            const tryFindFile = async () => {
+                try {
+                    const files = await fs.promises.readdir(downloadFolderPath);
+                    // Collect stats for each file to prefer non-empty and newest files
+                    const filesInfo = await Promise.all(files.map(async (f) => {
+                        try {
+                            const st = await fs.promises.stat(path.join(downloadFolderPath, f));
+                            return { name: f, size: st.size, mtimeMs: st.mtimeMs };
+                        } catch(e) {
+                            return { name: f, size: 0, mtimeMs: 0 };
+                        }
+                    }));
+                    try { this.environment.logger.log(this.video.identifier, '[tmpDir files] ' + JSON.stringify(filesInfo)); } catch(e) {}
+
+                    // Prefer exact match to the reported filename (and non-empty)
+                    if(candidate) {
+                        const exact = filesInfo.find(fi => fi.name === candidate && fi.size > 0);
+                        if(exact) return exact.name;
+                    }
+
+                    // Prefer files that start with expectedBase, are non-empty and match expected extension when possible
+                    const extDot = '.' + expectedExt;
+                    let matches = filesInfo.filter(fi => fi.name.startsWith(expectedBase) && fi.size > 0);
+                    const extMatches = matches.filter(fi => fi.name.toLowerCase().endsWith(extDot.toLowerCase()));
+                    if(extMatches.length > 0) {
+                        // Return the newest ext-matching file
+                        extMatches.sort((a,b) => b.mtimeMs - a.mtimeMs);
+                        return extMatches[0].name;
+                    }
+                    if(matches.length > 0) {
+                        matches.sort((a,b) => b.mtimeMs - a.mtimeMs);
+                        return matches[0].name;
+                    }
+
+                    // As last resort, pick the largest non-empty file
+                    const nonEmpty = filesInfo.filter(fi => fi.size > 0);
+                    if(nonEmpty.length > 0) {
+                        nonEmpty.sort((a,b) => b.size - a.size);
+                        return nonEmpty[0].name;
+                    }
+                } catch (e) {
+                    try { this.environment.logger.log(this.video.identifier, '[tmpDir read error] ' + String(e)); } catch(e2) {}
+                    // directory may not exist or not readable yet
+                }
+                return null;
+            }
+
+            let found = null;
+            for(let i=0;i<maxRetries;i++) {
+                found = await tryFindFile();
+                if(found) break;
+                await new Promise(r => setTimeout(r, retryDelayMs));
+            }
+
+            const toMove = found || (this.video.filename || (expectedBase + '.mp4'));
+            try {
+                try { this.environment.logger.log(this.video.identifier, '[move attempt] chosen=' + String(toMove) + ' found=' + String(found)); } catch(e) {}
+                this.environment.paths.moveFile(downloadFolderPath, this.environment.settings.downloadPath, toMove);
+            } catch (e) {
+                try { this.environment.logger.log(this.video.identifier, '[move error] ' + String(e)); } catch(e2) {}
+                console.error('Failed to move file after download:', e);
+                // Fallback: attempt copy then unlink to handle rename failures (locked files on Windows)
+                try {
+                    const src = path.join(downloadFolderPath, toMove);
+                    const dest = path.join(this.environment.settings.downloadPath, toMove);
+                    try { this.environment.logger.log(this.video.identifier, '[move fallback] copy src=' + src + ' dest=' + dest); } catch(e3) {}
+                    await fs.promises.copyFile(src, dest);
+                    try { this.environment.logger.log(this.video.identifier, '[move fallback] copy success'); } catch(e3) {}
+                    try { await fs.promises.unlink(src); } catch(e4) { /* ignore unlink error */ }
+                } catch(copyErr) {
+                    try { this.environment.logger.log(this.video.identifier, '[move fallback error] ' + String(copyErr)); } catch(e3) {}
+                }
+            }
 
             if(!this.environment.settings.keepUnmerged) {
                 this.removeVideoDataFolder(downloadFolderPath);
