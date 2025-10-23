@@ -16,19 +16,8 @@ Baixa Videos 3000 é um programa simples e eficiente para baixar vídeos de dive
 - 👀 Totalmente em português do Brasil com suporte a inglês também.
 
   ## ⏳ Coisas que vamos adicionar NAS PRÓXIMAS VERSÕES! Estamos trabalhando nisso.
-- Impedir o download da faixa de áudio "narrada por IA" do YouTube e sempre baixar a original.
-- Data de modificação no arquivo não será mais de quando o vídeo foi upado na plataforma e
-sim de quando você baixou, pra ficar mais fácil de organizar na pasta.
-- Baixar playlists.
-- Possibilidade de mudar a pasta temporária, que é onde os arquivos ficam  sendo processados
-antes de serem transferido para o destino final. Isso corrige o problema de quem tem pouco espaço no disco C:/
 - Atualizar direto pelo programa, sem precisar ficar desinstalando e baixando do Github para isso.
 - Possibilidade de selecionar apenas um trecho para baixar, ao invés de baixar inteiro.
-- Ao clicar na barra de link ele irá colar o link automaticamente sem precisar usar CTRL+V.
-- Novos estilos de interface.
-- Adicionar a possibilidade de converter formatos, principalmente converter vídeos do codec AV1 que
-não é suportado em programas de edição para o codec h264 que todos os programas aceitam.
-- O botão "Abrir" vai abrir a pasta onde está o arquivo e não irá reproduzir.
 
 Todas essas novas features e correções foram sugeridas pelas pessoas que usam o BaixaVideos 3000, obrigado!
 
@@ -131,4 +120,5 @@ Eu migrei o projeto em python para essa nova versão em Electron me baseando em 
 
 ---
 **Reginaldo Horse** 🐴🚀
+
 
